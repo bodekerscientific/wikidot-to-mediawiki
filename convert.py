@@ -14,9 +14,9 @@ import datetime as dt # for dt.datetime() and dt.datetime.now()
 import time ## for time.sleep()
 
 # https://github.com/maxcutler/python-wordpress-xmlrpc
-from wordpress_xmlrpc import Client, WordPressPost
-from wordpress_xmlrpc.methods.posts import NewPost
-from wordpress_xmlrpc.methods.users import GetUserInfo
+#from wordpress_xmlrpc import Client, WordPressPost
+#from wordpress_xmlrpc.methods.posts import NewPost
+#from wordpress_xmlrpc.methods.users import GetUserInfo
 
 SITE = 'http://blog.example.com/xmlrpc.php'
 #SITE = 'http://yourblog.wordpress.com/xmlrpc.php'
@@ -45,30 +45,21 @@ class ConversionController(object):
         self.__prepare_output_dir()
         f = codecs.open(self.__input_wiki_file, encoding='utf-8')
         text = f.read()
-
+        base_filename = os.path.splitext(os.path.basename(self.__input_wiki_file))[0]
+        
         # write the complete files to the output directory:
         complete_text = self.__converter.convert(text)
-        self.write_unicode_file("%s/%s" % (self.__output_directory, 'complete.mktxt'),complete_text)
-        html_text = '<html><head><title>%s</title><style type="text/css">%s</style></head><body><div class="wikistyle">' % ('Converted Markdown',file('style.css').read())
-        html_text += markdown.markdown(complete_text)
-        html_text += "</div></body></html>"
-        self.write_unicode_file("%s/%s" % (self.__output_directory, 'complete.html'),html_text)
+        self.write_unicode_file("%s/%s" % (self.__output_directory, base_filename+'.mktxt'),complete_text)
+        #html_text = '<html><head><title>%s</title><style type="text/css">%s</style></head><body><div class="wikistyle">' % ('Converted Markdown',file('style.css').read())
+        #html_text += markdown.markdown(complete_text)
+        #html_text += "</div></body></html>"
+        #self.write_unicode_file("%s/%s" % (self.__output_directory, base_filename+'.html'),html_text)
 
         # now handle the texts split to little junks:
         if self.__create_individual_files:
             parts = self.__converter.split_text(text)
             if len(parts) < 2: return # we need at least 2 entries (the first part is trashed and one part with content!)
             i=0
-            if self.__fill_blog:
-                wprb = WordPressPostingRobot(SITE,USER)
-                start_day = raw_input('Please enter the start date for the posts: [%s] ' % dt.datetime.now().strftime("%Y-%m-%d") )
-                start_day = start_day if start_day != "" else dt.datetime.now().strftime("%Y-%m-%d")
-                start = [int(value) for value in start_day.split("-")]
-                end_day = raw_input('Please enter the end date for the posts: [%s] ' % dt.datetime.now().strftime("%Y-%m-%d") )
-                end_day = end_day if end_day != "" else dt.datetime.now().strftime("%Y-%m-%d")
-                end = [int(value) for value in end_day.split("-")]
-                days_difference = (dt.datetime(end[0],end[1],end[2])-dt.datetime(start[0],start[1],start[2])).days
-                gradient = .0 if len(parts) == 2 else float(days_difference)/(len(parts)-2)
             for text_part in parts:
                 text_part =  self.__converter.convert(text_part)
                 i += 1
@@ -90,27 +81,6 @@ class ConversionController(object):
             out_file.write(content)
         except:
             print "Error on writing to file %s." % path_to_file
-
-
-class WordPressPostingRobot(object):
-    def __init__(self, site, user, password=""):
-        if password == "": password = raw_input('Please enter the password for the user %s: ' % user)
-        self.additional_tags = raw_input('Please enter additional tags to give to all the posts: ')
-        self.__wp = Client(site, user, password)
-        #wp.call(GetUserInfo())
-
-    def post_new(self, title, content, categories = ['Mac OS X'], individual_tags = '', status = 'private', date = dt.datetime.now()):
-        post = WordPressPost()
-        post.title = title
-        post.description = content
-        tags = 'automatically posted' if (self.additional_tags == '')  else self.additional_tags + ', automatically posted'
-        tags = individual_tags + tags
-        post.tags = tags
-        post.date_created = date
-        post.post_status = status
-        post.categories = categories
-        self.__wp.call(NewPost(post, True))
-
 
 def main():
     """ Main function called to start the conversion."""

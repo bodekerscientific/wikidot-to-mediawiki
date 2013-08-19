@@ -16,12 +16,10 @@ class WikidotToMarkdown(object):
 
         self.static_replacements = { '[[toc]]': '', # no equivalent for table of contents in Markdown
                                    }
-        self.regex_replacements = { r'^\+ ([^\n]*)$': r"# \1\n", # headings
-                                    r'^\+\+ ([^\n]*)$': r"## \1\n",
-                                    r'^\+\+\+ ([^\n]*)$': r"### \1\n",
-                                    r'([^:])//([\s\S ]*?)//': r'\1*\2*', # italics
-                                    r'([^:])__([\s\S ]*?)__': r'\1**\2**', # underlining → bold
-                                    r'([^:]){{([\s\S ]*?)}}': r'\1`\2`', # inline monospaced text
+        self.regex_replacements = { r'([^:])//([\s\S ]*?)[^:]//': r"\1''\2''", # italics
+                                    r'([^:])\*\*([\s\S ]*?)\*\*': r"\1'''\2'''", # bold
+                                    r'([^:])__([\s\S ]*?)__': r"\1'''\2'''", # underlining → bold
+                                    #r'([^:]){{([\s\S ]*?)}}': r'\1`\2`', # inline monospaced text
                                   }
         self.regex_split_condition = r"^\+ ([^\n]*)$"
 
@@ -36,20 +34,54 @@ class WikidotToMarkdown(object):
             code_blocks[tmp_hash] = "\n"+string.join(["    " + l for l in code_block_found[-1].strip().split("\n") ],"\n")+"\n"
         for search, replacement in self.static_replacements.items():
             text = text.replace(search,replacement,1)
+
+
+
+        text = text.replace("[/ page principale]", "[[Jeux de l'univers Hammer and Planks|Jeux de l'univers Hammer & Planks]]")
+
+            
         # search for any of the simpler replacements in the dictionary regex_replacements
         for s_reg, r_reg in self.regex_replacements.items():
             text = re.sub(re.compile(s_reg,re.MULTILINE),r_reg,text)
-        # search for simple http://www.google.com links:
-        for link in re.finditer(r"[\s\S\n ]("+self.url_regex+r")", text):
-            if link.group(0)[0] == "[" : continue
-            text = text.replace(link.group(1),"<%s>  " % link.group(1),1)
-        # search for links of the form [http://www.google.com Google Website]
-        for link in re.finditer(r"\[("+self.url_regex+r") ([^\]]*)\]", text):
-            #print link.group(0), "[%s](%s)" % (link.groups()[-1],link.group(1))
-            text = text.replace(link.group(0),"[%s](%s)" % (link.groups()[-1],link.group(1)),1)
-        # search for unhandled tags and state them
-        for unhandled_tag in re.finditer(r"\[\[/([\s\S ]*?)\]\]", text):
-            print("Found an unhandled tag: %s" % unhandled_tag.group(1))
+        # TITLES -- replace '+++ X' with '=== X ==='
+        for titles in re.finditer(r"^(\++)([^\n]*)$", text, re.MULTILINE):
+            header = ("=" * len(titles.group(1)))
+            text = text.replace(titles.group(0), header + (titles.group(2)[:-1] + " ") + header)
+        # LISTS(*) -- replace '  *' with '***' and so on         
+        for stars in re.finditer(r"^([ \t]+)\*", text, re.MULTILINE):
+            text = text[:stars.start(1)] + ("*" * len(stars.group(1))) + text[stars.end(1):]
+        # LISTS(#) -- replace '  #' with '###' and so on
+        for hashes in re.finditer(r"^([ \t]+)\*", text, re.MULTILINE):
+            text = text[:hashes.start(1)] + ("#" * len(hashes.group(1))) + text[hashes.end(1):]
+        # INTERNAL LINKS -- replace [[[bink]]] with [[bink]]
+        for inlink in re.finditer(r"\[\[\[([\s\S ]*?)\]\]\]", text):
+            text = text.replace(inlink.group(0), "[["+inlink.group(1)+"]]")
+        # IMAGES
+        for image in re.finditer(r"\[\[image([\s\S ]*?)\]\]", text):
+            text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
+        # START TABLE
+        for table in re.finditer(r"\[\[table([\s\S ]*?)\]\]", text):
+            #text = text.replace(table.group(0), "{|" + table.group(1))
+            text = text.replace(table.group(0), "{|")
+        # START ROW
+        for row in re.finditer(r"\[\[row([\s\S ]*?)\]\]", text):
+            #text = text.replace(row.group(0), "|-" + row.group(1))
+            text = text.replace(row.group(0), "|-")
+        # START CELL
+        for cell in re.finditer(r"\[\[cell([\s\S ]*?)\]\]", text):
+            #text = text.replace(cell.group(0), "|" + cell.group(1))
+            text = text.replace(cell.group(0), "|")
+	# ENDS
+	for end in re.finditer(r"\[\[/([\s\S ]*?)\]\]", text):
+            token = end.group(1)
+            if token == "table":
+                text = text.replace(end.group(0), "|}")
+	    elif token == "row":
+                # end row tabs are not necessary in mediawiki
+                text = text.replace(end.group(0), "")
+            elif token == "cell":
+		# end cell tabs are not necessary in mediawiki
+		text = text.replace(end.group(0), "")
         # now we substitute back our code blocks
         for tmp_hash, code in code_blocks.items():
             text = text.replace(tmp_hash, code, 1)
