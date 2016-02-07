@@ -2,28 +2,21 @@
 
 # Copyright 2012 Philipp Klaus
 # Part of https://github.com/vLj2/wikidot-to-markdown
+# Improved 2016 by Christopher Mitchell
+# https://github.com/KermMartian/wikidot-to-markdown
 
 from wikidot import WikidotToMarkdown ## most important here
 
-import sys ## for sys.exit()
-import os ## for os.makedirs()
-import optparse ## for optparse.OptionParser()
-import markdown ## for markdown.markdown()
-import codecs ## for codecs.open()
-import datetime as dt # for dt.datetime() and dt.datetime.now()
-import time ## for time.sleep()
+import sys				## for sys.exit()
+import os				## for os.makedirs()
+import optparse			## for optparse.OptionParser()
+import markdown			## for markdown.markdown()
+import codecs			## for codecs.open()
+import datetime as dt	## for dt.datetime() and dt.datetime.now()
+import time				## for time.sleep()
 
-# https://github.com/maxcutler/python-wordpress-xmlrpc
-#from wordpress_xmlrpc import Client, WordPressPost
-#from wordpress_xmlrpc.methods.posts import NewPost
-#from wordpress_xmlrpc.methods.users import GetUserInfo
-
-SITE = 'http://blog.example.com/xmlrpc.php'
-#SITE = 'http://yourblog.wordpress.com/xmlrpc.php'
-USER = 'username'
 DEFAULT_OUTPUT_DIR = "output"
-#SLEEP_TIME = 1 # seconds to sleep after each post sent to the blog (if you use your own server, set this to 0)
-SLEEP_TIME = 0
+SLEEP_TIME = 0 # seconds to sleep after each post sent to the blog (if you use your own server, set this to 0)
 
 class ConversionController(object):
     def __init__(self, options):
@@ -50,10 +43,6 @@ class ConversionController(object):
         # write the complete files to the output directory:
         complete_text = self.__converter.convert(text)
         self.write_unicode_file("%s/%s" % (self.__output_directory, base_filename+'.mktxt'),complete_text)
-        #html_text = '<html><head><title>%s</title><style type="text/css">%s</style></head><body><div class="wikistyle">' % ('Converted Markdown',file('style.css').read())
-        #html_text += markdown.markdown(complete_text)
-        #html_text += "</div></body></html>"
-        #self.write_unicode_file("%s/%s" % (self.__output_directory, base_filename+'.html'),html_text)
 
         # now handle the texts split to little junks:
         if self.__create_individual_files:
@@ -66,7 +55,9 @@ class ConversionController(object):
                 if i == 1:
                     print("\nAttention! We skip the first output part (when splitting the text into parts):\n\n%s" % text_part)
                     continue
-                if self.__create_individual_files: self.write_unicode_file("%s/%i%s" % (self.__output_directory, i, '.mktxt'),text_part)
+                if self.__create_individual_files:
+					self.write_unicode_file(os.path.join(self.__output_directory, "%s/%i%s" % (i, '.mktxt')), \
+					                        text_part)
                 lines = text_part.split("\n")
                 if self.__fill_blog:
                     title = lines[0].replace("# ","")
