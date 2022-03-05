@@ -32,7 +32,9 @@ class ConversionController(object):
         except OSError as ex:
             print("Could not create output folder "+self.__output_directory+".")
             if ex.errno == os.errno.EEXIST: print("It already exists.")
-            else: print "Error %i: %s" % (ex.errno, str(ex)); sys.exit(1)
+            else: 
+                print("Error %i: %s" % (ex.errno, str(ex)))
+                sys.exit(1)
 
     def convert(self):
         self.__prepare_output_dir()
@@ -56,8 +58,10 @@ class ConversionController(object):
                     print("\nAttention! We skip the first output part (when splitting the text into parts):\n\n%s" % text_part)
                     continue
                 if self.__create_individual_files:
-					self.write_unicode_file(os.path.join(self.__output_directory, "%s/%i%s" % (i, '.mktxt')), \
-					                        text_part)
+                    self.write_unicode_file(
+                        os.path.join(self.__output_directory, "%s/%i%s" % (i, '.mktxt')), 
+                        text_part
+                    )
                 lines = text_part.split("\n")
                 if self.__fill_blog:
                     title = lines[0].replace("# ","")
@@ -71,7 +75,7 @@ class ConversionController(object):
             out_file = codecs.open(path_to_file,encoding='utf-8', mode='w')
             out_file.write(content)
         except:
-            print "Error on writing to file %s." % path_to_file
+            print("Error on writing to file %s." % path_to_file)
 
 def main():
     """ Main function called to start the conversion."""
