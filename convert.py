@@ -10,7 +10,6 @@ from wikidot import WikidotToMarkdown ## most important here
 import sys				## for sys.exit()
 import os				## for os.makedirs()
 import optparse			## for optparse.OptionParser()
-import markdown			## for markdown.markdown()
 import codecs			## for codecs.open()
 import datetime as dt	## for dt.datetime() and dt.datetime.now()
 import time				## for time.sleep()
