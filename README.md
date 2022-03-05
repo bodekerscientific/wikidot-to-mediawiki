@@ -19,6 +19,28 @@ Getting Your Data
 Your Wikitext-formatted files can be downloaded from Wikidot using [Wikidot-tools](https://github.com/bodekerscientific/wikidot_tools).
 
 
+Uploading to New Site
+---------------------
+
+To upload the converted Wikidot pages to your MediaWiki-based site, you'll need the address of your site and a bot login.  This data needs to be saved into a file called `SECRETS.py`.
+
+First, create the file `SECRETS.py` in this directory.  Below is an example of its contents:
+
+    endpoint = "https://example.com/api.php"
+    bot_username = "MyUsername@BotUsername"
+    bot_password = "BotPassword"
+    verify = True # Set to False if your site does not have a valid SSL certificate
+
+The endpoint is the API endpoint for your MediaWiki-based site.  You can obtain the endpoint via the page `Special:ApiSandbox`.  For more detail, see the [MediaWiki API documentation](https://www.mediawiki.org/wiki/API:Main_page).
+
+A bot login can be created at `Special:BotPasswords`.  You will need to give it the rights to:
+* high-volume editing
+* create, edit, and move pages
+* upload new files
+
+If your site does not have an SSL certificate, or if the certificate is self-signed, you will want to set `verify` to `False`.
+
+
 Testing
 -------
 
