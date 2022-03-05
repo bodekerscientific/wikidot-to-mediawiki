@@ -60,14 +60,14 @@ class MediaWiki:
 
         return data
 
-    def create_page(self):
+    def create_page(self, title, text):
         edit_token = self._get_edit_token()
 
         params = {
             "action": "edit",
             "format": "json",
-            "title": "Test",
-            "text": "This is an automatically generated page by wikidot-to-mediawiki",
+            "title": title,
+            "text": text,
             "token": edit_token
         }
         response = self._session.post(self._endpoint, data=params, verify=False)
@@ -75,4 +75,30 @@ class MediaWiki:
 
         print("data:", data)
         if "error" in data:
-            raise Exception("Failed to create page: "+str(data))    
+            raise Exception("Failed to create page: "+str(data))
+
+    def upload_file(self, filename, path):
+        edit_token = self._get_edit_token()
+
+        params = {
+            "action": "upload",
+            "filename": filename,
+            "format": "json",
+            "token": edit_token,
+            "ignorewarnings": 1
+        }
+
+        files = {
+            'file': (filename, open(path, 'rb'), 'multipart/form-data')
+        }
+
+        response = self._session.post(
+            self._endpoint, 
+            files=files, 
+            data=params
+        )
+
+        data = response.json()
+        print(data)
+
+        return data
