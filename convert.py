@@ -4,8 +4,8 @@
 # Part of https://github.com/vLj2/wikidot-to-markdown
 # Improved 2016 by Christopher Mitchell
 # https://github.com/KermMartian/wikidot-to-markdown
-
-from wikidot import WikidotToMarkdown ## most important here
+# Improved 2022 by Matthew Walker
+# https://github.com/bodekerscientific/wikidot-to-mediawiki
 
 import sys				## for sys.exit()
 import os				## for os.makedirs()
@@ -13,6 +13,9 @@ import optparse			## for optparse.OptionParser()
 import codecs			## for codecs.open()
 import datetime as dt	## for dt.datetime() and dt.datetime.now()
 import time				## for time.sleep()
+from pathlib import Path
+
+from wikidot import WikidotToMarkdown
 
 DEFAULT_OUTPUT_DIR = "output"
 SLEEP_TIME = 0 # seconds to sleep after each post sent to the blog (if you use your own server, set this to 0)
@@ -26,14 +29,8 @@ class ConversionController(object):
         self.__converter = WikidotToMarkdown()
 
     def __prepare_output_dir(self):
-        try:
-            os.makedirs(self.__output_directory)
-        except OSError as ex:
-            print("Could not create output folder "+self.__output_directory+".")
-            if ex.errno == os.errno.EEXIST: print("It already exists.")
-            else: 
-                print("Error %i: %s" % (ex.errno, str(ex)))
-                sys.exit(1)
+        output_dir = Path(self.__output_directory)
+        output_dir.mkdir(parents=True, exist_ok=True)
 
     def convert(self):
         self.__prepare_output_dir()
