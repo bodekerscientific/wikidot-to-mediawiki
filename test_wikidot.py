@@ -23,6 +23,14 @@ def test_internal_links():
     assert result == expected
     assert links == ["some text", "internal page"]
 
+def test_internal_link_with_alt_text():
+    text = "[[[internal page | alternative text]]]"
+    expected = "[[internal page|alternative text]]"
+    instance = WikidotToMediaWiki()
+    result, links, _ = instance.convert(text)
+    assert result == expected
+    assert links == ["internal page"]
+
 def test_code():
     text = 'This is a code block: [[code type="python"]]1 + 2 == 3[[/code]]'
     expected = "This is a code block: \n <nowiki>1 + 2 == 3</nowiki>"

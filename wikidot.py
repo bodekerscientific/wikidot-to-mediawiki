@@ -51,11 +51,26 @@ class WikidotToMediaWiki():
         # LISTS(#) -- replace '  #' with '###' and so on
         for hashes in re.finditer(r"^([ \t]+)\*", text, re.MULTILINE):
             text = text[:hashes.start(1)] + ("#" * len(hashes.group(1))) + text[hashes.end(1):]
-        # INTERNAL LINKS -- replace [[[internal link]]] with [[internal link]]
+
+        # Internal links -- replace [[[internal link]]] with [[internal link]]
         internal_links = []
-        for inlink in re.finditer(r"\[\[\[([\s\S ]*?)\]\]\]", text):
-            text = text.replace(inlink.group(0), "[["+inlink.group(1)+"]]")
-            internal_links.append(inlink.group(1))
+        for inlink in re.finditer(r"\[\[\[([\s\S]*?)\]\]\]", text):
+            inlink_contents = inlink.group(1)
+            # Check for existance of alternative text
+            pattern = re.compile(r"([\S\s]*?)[\s]*\|[\s]*([\S\s]*?)")
+            match = pattern.fullmatch(inlink_contents)
+            if match is not None:
+                # Contents contains alternative text
+                internal_page = match.group(1)
+                alt_text = match.group(2)
+                replacement_contents = f"[[{internal_page}|{alt_text}]]"
+            else:
+                # Contents must be only the name of the internal page
+                internal_page = inlink_contents
+                replacement_contents = f"[[{internal_page}]]"
+            text = text.replace(inlink.group(0), replacement_contents)
+            internal_links.append(internal_page)
+
         # IMAGES
         linked_files = []
         for image in re.finditer(r"\[\[image ([\S]*)([\S\s ]*?)\]\]", text):
