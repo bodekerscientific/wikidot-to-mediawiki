@@ -57,7 +57,8 @@ class WikidotToMediaWiki():
             internal_links.append(inlink.group(1))
         # IMAGES
         linked_files = []
-        for image in re.finditer(r"\[\[image ([\S\s ]+?) ([\S\s ]*?)\]\]", text):
+        for image in re.finditer(r"\[\[image ([\S]*)([\S\s ]*?)\]\]", text):
+            print("image:", image.group(0))
             text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
             linked_files.append(image.group(1))
         # Gallery
