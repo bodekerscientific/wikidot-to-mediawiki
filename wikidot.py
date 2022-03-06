@@ -80,7 +80,7 @@ class WikidotToMediaWiki():
         for file in re.finditer(r"\[\[file[\s]*([\S\s]*?)[\s]*\]\]", text, re.MULTILINE):
             file_contents = file.group(1)
             # Check for existance of alternative text
-            pattern = re.compile(r"([\S\s]*?)\|[\s]*([\S\s]*?)")
+            pattern = re.compile(r"([\S\s]*?)[\s]*\|[\s]*([\S\s]*?)")
             match = pattern.fullmatch(file_contents)
             if match is not None:
                 # Contents contains alternative text

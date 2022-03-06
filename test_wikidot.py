@@ -116,6 +116,12 @@ def test_file_example4():
     result, _, linked_files = instance.convert(text)
     assert linked_files == ["filename"]
 
+def test_file_example5():
+    text = "[[file filename | alternative text]]"
+    instance = WikidotToMediaWiki()
+    result, _, linked_files = instance.convert(text)
+    assert linked_files == ["filename"]
+
 def test_file_excessive_matching():
     text = (
         "If I have the contents, say 'file filename' outside of a tag, it should not be replaced"
