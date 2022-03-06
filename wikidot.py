@@ -5,6 +5,8 @@
 # Part of https://github.com/vLj2/wikidot-to-markdown
 # Improved 2016 by Christopher Mitchell
 # https://github.com/KermMartian/wikidot-to-markdown
+# Improved 2022 by Matthew Walker
+# https://github.com/bodekerscientific/wikidot-to-mediawiki
 
 import regex as re
 import uuid			## to generate random UUIDs using uuid.uuid4()

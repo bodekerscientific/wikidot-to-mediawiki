@@ -7,13 +7,10 @@
 # Improved 2022 by Matthew Walker
 # https://github.com/bodekerscientific/wikidot-to-mediawiki
 
-import sys				## for sys.exit()
-import os				## for os.makedirs()
 import codecs			## for codecs.open()
-import datetime as dt	## for dt.datetime() and dt.datetime.now()
-import time				## for time.sleep()
 import argparse
 from pathlib import Path
+import shutil
 
 from wikidot import WikidotToMediaWiki
 
@@ -58,6 +55,11 @@ class ConversionController():
         dest_dir = self.__process_dest(dest)
         internal_links_map = {}
 
+        if self.__args.include_associated_xml_files:
+            print("Including XML files in directories of associated files.")
+        else:
+            print("Ignoring XML files in directories of associated files.")
+
         for input_file in input_files:
             print(f"Processing {input_file}")
             f = codecs.open(input_file, encoding='utf-8')
@@ -69,22 +71,54 @@ class ConversionController():
             output_file = dest_dir / (base_filename+'.mktxt')
             self.write_unicode_file(output_file, converted_text)
 
-            # Attempt to find the linked files
+            # Get associated files
             associated_dir = input_file.parent / input_file.stem
-            assert associated_dir.is_dir()
-            associated_files = sorted(associated_dir.glob("*"))
-            associated_files = [f.name for f in associated_files]
+            if not associated_dir.is_dir():
+                print(f"  Did not find directory of associated files at {associated_dir}")
+                associated_files = []
+                associated_paths = []
+            else:
+                associated_paths = sorted(associated_dir.glob("*"))
+                associated_files = [f.name for f in associated_paths]
+
             # Check that all files linked in the text can be found in the associated files
             for linked_file in linked_files:
                 if linked_file not in associated_files:
                     print("  Linked file not found in associated dir:", linked_file)
+
             # Check that all associated files have been linked
             for associated_file in associated_files:
                 if associated_file not in linked_files:
                     xml_file = associated_file.split(".")[-1] == "xml"
-                    if xml_file and self.__args.ignore_associated_xml_files:
+                    if xml_file and not self.__args.include_associated_xml_files:
                         continue
                     print("  Associated file not found in linked files:", associated_file)
+
+            # Copy all associated files to upload
+            upload_dir = dest_dir / "files_to_upload"
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            existing_files = [f.name for f in sorted(upload_dir.glob("*"))]
+            for associated_path in associated_paths:
+                xml_file = associated_path.suffix == ".xml"
+                if xml_file and not self.__args.include_associated_xml_files:
+                    continue
+                if associated_path.name in existing_files:
+                    message = f"A file with the name {associated_path.name} already exists in {upload_dir}."
+                    print("  "+message)
+                    # Check if the files are identical
+                    associated_bytes = associated_path.read_bytes()
+                    upload_bytes = (upload_dir / associated_path.name).read_bytes()
+                    if associated_bytes == upload_bytes:
+                        print("  But the two files are identical.")
+                        continue
+                    else:
+                        print("  And the two files are different.")
+                        raise Exception(message)
+
+                print(f"  Copying {associated_path}")
+                shutil.copy(associated_path, upload_dir)
+
+
 
         print("Internal links:")
         print(internal_links_map)
@@ -110,10 +144,11 @@ def main():
     parser.add_argument('source', help="File or directory containing source files from Wikidot site")
     parser.add_argument('dest', help="Directory to output files converted to MediaWiki format")
     parser.add_argument(
-        "-i",
-        "--ignore-associated-xml-files", 
+        "-x",
+        "--include-associated-xml-files",
+        default=False,
         action='store_true',
-        help="Ignore any XML files in the files associated with source files"
+        help="Include any XML files in the files associated with source files"
     )
     arguments = parser.parse_args()
 
