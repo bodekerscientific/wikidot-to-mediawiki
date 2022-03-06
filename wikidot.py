@@ -58,13 +58,11 @@ class WikidotToMediaWiki():
         # IMAGES
         linked_files = []
         for image in re.finditer(r"\[\[image ([\S]*)([\S\s ]*?)\]\]", text):
-            print("image:", image.group(0))
             text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
             linked_files.append(image.group(1))
         # Gallery
         for gallery in re.finditer(r"\[\[gallery[ \S]*?\]\]([\S\s ]*)\[\[/gallery\]\]", text, re.MULTILINE):
             replacement_gallery = "<gallery>\n"
-            print("gallery found!:", gallery.group(1))
             gallery_content = gallery.group(1)
             for filename_match in re.finditer(r"^: ([\S]*)", gallery_content, re.MULTILINE):
                 filename = filename_match.group(1)
