@@ -61,7 +61,7 @@ class WikidotToMediaWiki():
             text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
             linked_files.append(image.group(1))
         # Gallery
-        for gallery in re.finditer(r"\[\[gallery\]\]([\S\s ]*)\[\[/gallery\]\]", text, re.MULTILINE):
+        for gallery in re.finditer(r"\[\[gallery[ \S]*?\]\]([\S\s ]*)\[\[/gallery\]\]", text, re.MULTILINE):
             replacement_gallery = "<gallery>\n"
             print("gallery found!:", gallery.group(1))
             gallery_content = gallery.group(1)
