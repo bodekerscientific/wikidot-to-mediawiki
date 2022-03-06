@@ -41,7 +41,7 @@ class ConversionController():
 
     def __process_dest(self, dest):
         dest_dir = Path(dest)
-        if not dest_dir.is_dir():
+        if dest_dir.is_file():
             raise Exception("Destination is not a directory")
 
         dest_dir.mkdir(parents=True, exist_ok=True)
@@ -69,8 +69,6 @@ class ConversionController():
             file_prefix = base_filename+"__"
             converted_text, internal_links, linked_files = self.__converter.convert(text, file_prefix=file_prefix)
             internal_links_map[base_filename] = internal_links
-            output_file = dest_dir / (base_filename+'.mktxt')
-            self.write_unicode_file(output_file, converted_text)
 
             # Get associated files
             associated_dir = input_file.parent / input_file.stem
@@ -88,12 +86,25 @@ class ConversionController():
                     print("  Linked file not found in associated dir:", linked_file)
 
             # Check that all associated files have been linked
+            unlinked_associated_files = []
             for associated_file in associated_files:
                 if associated_file not in linked_files:
                     xml_file = associated_file.split(".")[-1] == "xml"
                     if xml_file and not self.__args.include_associated_xml_files:
                         continue
                     print("  Associated file not found in linked files:", associated_file)
+                    unlinked_associated_files.append(associated_file)
+
+            # Add any unlinked associated files to text
+            if len(unlinked_associated_files) > 0:
+                appendix = (
+                    "\n== Unlinked Associated Files ==\n"
+                    + "In Wikidot, there were files associated with this page that were not linked in the text above:\n"
+                )
+                for unlinked_associated_file in unlinked_associated_files:
+                    appendix += "* [[Media:"+file_prefix+unlinked_associated_file+"|"+unlinked_associated_file+"]]\n"
+                converted_text = converted_text + appendix
+                print("  Added appendix to converted text listing unlinked associated files")
 
             # Copy all associated files to upload
             upload_dir = dest_dir / "files_to_upload"
@@ -119,6 +130,12 @@ class ConversionController():
                 upload_path = upload_dir / (file_prefix+associated_path.name)
                 print(f"  Copying {associated_path} to {upload_path}")
                 shutil.copy(associated_path, upload_path)
+
+            # Write converted text
+            output_file = dest_dir / (base_filename+'.mktxt')
+            self.write_unicode_file(output_file, converted_text)
+
+
 
 
 
