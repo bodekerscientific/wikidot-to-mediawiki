@@ -97,3 +97,9 @@ def test_file_example():
     assert result == expected
     assert linked_files == ["proposal.pdf"]
     
+def test_file_example2():
+    text = "|| [[file filename]] ||"
+    instance = WikidotToMediaWiki()
+    result, _, linked_files = instance.convert(text)
+    assert linked_files == ["filename"]
+

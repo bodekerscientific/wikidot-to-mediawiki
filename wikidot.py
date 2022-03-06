@@ -82,7 +82,7 @@ class WikidotToMediaWiki():
             text = text.replace(gallery.group(0), replacement_gallery)
 
         # File with alternative text
-        for file in re.finditer(r"\[\[file[\s]*?(\S*?)[\s]*?\|([\S\s]*?)\]\]", text, re.MULTILINE):
+        for file in re.finditer(r"\[\[file[\s]*?([A-Za-z0-9_.\-]*?)[\s]*?\|([\S\s]*?)\]\]", text, re.MULTILINE):
             original_filename = file.group(1)
             alt_text = file.group(2)
             if file_prefix is None:
@@ -93,7 +93,7 @@ class WikidotToMediaWiki():
             linked_files.append(original_filename)
 
         # File
-        for file in re.finditer(r"\[\[file[\s]*?(\S*?)[\s]*?\]\]", text, re.MULTILINE):
+        for file in re.finditer(r"\[\[file[\s]*?([A-Za-z0-9_.\-]*?)[\s]*?\]\]", text, re.MULTILINE):
             original_filename = file.group(1)
             if file_prefix is None:
                 filename = original_filename
