@@ -8,11 +8,10 @@
 
 import re ## The most important module here!
 import string ## for string.join()
-#import markdown
 import uuid			## to generate random UUIDs using uuid.uuid4()
 import postprocess	## Custom postprocessing
 
-class WikidotToMarkdown(object):
+class WikidotToMediaWiki():
     def __init__(self):
         # regex for URL found on http://regexlib.com/REDetails.aspx?regex_id=501
         self.url_regex = r"(http|https|ftp)\://([a-zA-Z0-9\.\-]+(\:[a-zA-Z0-9\.&amp;%\$\-]+)*@)*((25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])|localhost|([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9\-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(\:[0-9]+)*(/($|[a-zA-Z0-9\.\,\?\'\\\+&amp;%\$#\=~_\-]+))*[/]?"
@@ -35,7 +34,7 @@ class WikidotToMarkdown(object):
         for code_block_found in code_blocks_found:
             tmp_hash = str(uuid.uuid4())
             text = text.replace(code_block_found[0],tmp_hash,1) # replace code block with a hash - to fill it in later
-            code_blocks[tmp_hash] = "\n"+string.join([" " + l for l in code_block_found[-1].strip().split("\n") ],"\n")+"\n"
+            code_blocks[tmp_hash] = code_block_found[-1]
         for search, replacement in self.static_replacements.items():
             text = text.replace(search,replacement,1)
             
@@ -52,9 +51,11 @@ class WikidotToMarkdown(object):
         # LISTS(#) -- replace '  #' with '###' and so on
         for hashes in re.finditer(r"^([ \t]+)\*", text, re.MULTILINE):
             text = text[:hashes.start(1)] + ("#" * len(hashes.group(1))) + text[hashes.end(1):]
-        # INTERNAL LINKS -- replace [[[bink]]] with [[bink]]
+        # INTERNAL LINKS -- replace [[[internal link]]] with [[internal link]]
+        internal_links = []
         for inlink in re.finditer(r"\[\[\[([\s\S ]*?)\]\]\]", text):
             text = text.replace(inlink.group(0), "[["+inlink.group(1)+"]]")
+            internal_links.append(inlink.group(1))
         # IMAGES
         for image in re.finditer(r"\[\[image([\s\S ]*?)\]\]", text):
             text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
@@ -82,8 +83,9 @@ class WikidotToMarkdown(object):
                 # end cell tabs are not necessary in mediawiki
                 text = text.replace(end.group(0), "")
 
-        # now we substitute back our code blocks
+        # Substitute back our code blocks
         for tmp_hash, code in code_blocks.items():
+            code = "\n <nowiki>"+code+"</nowiki>"
             text = text.replace(tmp_hash, code, 1)
 
         # Process color corrections
@@ -148,13 +150,4 @@ class WikidotToMarkdown(object):
         # Optional postprocessing stage
         text = postprocess.postprocess(text)	
 
-        return text
-
-    def split_text(self, text):
-        output_parts = []
-        split_regex = re.compile(self.regex_split_condition)
-        for line in text.split("\n"):
-            line += "\n"
-            if len(output_parts) > 0 and (re.match(split_regex,line) == None): output_parts[-1] += line
-            else: output_parts.append(line)
-        return output_parts
+        return text, internal_links
