@@ -81,16 +81,6 @@ class WikidotToMediaWiki():
             replacement_gallery += "</gallery>"
             text = text.replace(gallery.group(0), replacement_gallery)
 
-        # File
-        for file in re.finditer(r"\[\[file[\s]*?(\S*?)[\s]*?\]\]", text, re.MULTILINE):
-            original_filename = file.group(1)
-            if file_prefix is None:
-                filename = original_filename
-            else:
-                filename = file_prefix + original_filename
-            text = text.replace(file.group(0), f"[[Media:{filename}]]")
-            linked_files.append(original_filename)
-
         # File with alternative text
         for file in re.finditer(r"\[\[file[\s]*?(\S*?)[\s]*?\|([\S\s]*?)\]\]", text, re.MULTILINE):
             original_filename = file.group(1)
@@ -100,6 +90,16 @@ class WikidotToMediaWiki():
             else:
                 filename = file_prefix + original_filename
             text = text.replace(file.group(0), f"[[Media:{filename}|{alt_text}]]")
+            linked_files.append(original_filename)
+
+        # File
+        for file in re.finditer(r"\[\[file[\s]*?(\S*?)[\s]*?\]\]", text, re.MULTILINE):
+            original_filename = file.group(1)
+            if file_prefix is None:
+                filename = original_filename
+            else:
+                filename = file_prefix + original_filename
+            text = text.replace(file.group(0), f"[[Media:{filename}]]")
             linked_files.append(original_filename)
 
         # START TABLE

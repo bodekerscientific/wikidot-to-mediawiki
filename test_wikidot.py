@@ -88,3 +88,12 @@ def test_file_with_alt_text():
     result, _, linked_files = instance.convert(text)
     assert result == expected
     assert linked_files == ["filename"]
+
+def test_file_example():
+    text = "[[file proposal.pdf|Here]] is the proposal that was submitted."
+    expected = "[[Media:proposal.pdf|Here]] is the proposal that was submitted."
+    instance = WikidotToMediaWiki()
+    result, _, linked_files = instance.convert(text)
+    assert result == expected
+    assert linked_files == ["proposal.pdf"]
+    
