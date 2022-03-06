@@ -103,3 +103,24 @@ def test_file_example2():
     result, _, linked_files = instance.convert(text)
     assert linked_files == ["filename"]
 
+def test_file_example3():
+    text = "* [[file filename with spaces-hypens_underscores.pdf| Description with spaces.]]"
+    instance = WikidotToMediaWiki()
+    result, _, linked_files = instance.convert(text)
+    print("result:", result)
+    assert linked_files == ["filename with spaces-hypens_underscores.pdf"]
+
+def test_file_excessive_matching():
+    text = (
+        "If I have the contents, say 'file filename' outside of a tag, it should not be replaced"
+        + " when I have a file tag with the same contents [[file filename]]."
+    )
+    expected = (
+        "If I have the contents, say 'file filename' outside of a tag, it should not be replaced"
+        + " when I have a file tag with the same contents [[Media:filename]]."
+    )
+    instance = WikidotToMediaWiki()
+    result, _, linked_files = instance.convert(text)
+    print("result:", result)
+    assert result == expected
+    assert linked_files == ["filename"]
