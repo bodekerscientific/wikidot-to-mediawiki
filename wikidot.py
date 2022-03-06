@@ -26,7 +26,7 @@ class WikidotToMediaWiki():
                                   }
         self.regex_split_condition = r"^\+ ([^\n]*)$"
 
-    def convert(self, text):
+    def convert(self, text, file_prefix=None):
         text = '\n'+text+'\n'# add embed in newlines (makes regex replaces work better)
         # first we search for [[code]] statements as we don't want any replacement to happen inside those code blocks!
         code_blocks = dict()
@@ -59,18 +59,49 @@ class WikidotToMediaWiki():
         # IMAGES
         linked_files = []
         for image in re.finditer(r"\[\[image ([\S]*)([\S\s ]*?)\]\]", text):
-            text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
-            linked_files.append(image.group(1))
+            original_filename = image.group(1)
+            if file_prefix is None:
+                filename = original_filename
+            else:
+                filename = file_prefix + original_filename
+            text = text.replace(image.group(0), "[[File:" + filename + "]]")
+            linked_files.append(original_filename)
         # Gallery
         for gallery in re.finditer(r"\[\[gallery[ \S]*?\]\]([\S\s ]*)\[\[/gallery\]\]", text, re.MULTILINE):
             replacement_gallery = "<gallery>\n"
             gallery_content = gallery.group(1)
             for filename_match in re.finditer(r"^: ([\S]*)", gallery_content, re.MULTILINE):
-                filename = filename_match.group(1)
+                original_filename = filename_match.group(1)
+                if file_prefix is None:
+                    filename = original_filename
+                else:
+                    filename = file_prefix + original_filename
                 replacement_gallery += filename + "\n"
-                linked_files.append(filename)
+                linked_files.append(original_filename)
             replacement_gallery += "</gallery>"
             text = text.replace(gallery.group(0), replacement_gallery)
+
+        # File
+        for file in re.finditer(r"\[\[file[\s]*?(\S*?)[\s]*?\]\]", text, re.MULTILINE):
+            original_filename = file.group(1)
+            if file_prefix is None:
+                filename = original_filename
+            else:
+                filename = file_prefix + original_filename
+            text = text.replace(file.group(0), f"[[Media:{filename}]]")
+            linked_files.append(original_filename)
+
+        # File with alternative text
+        for file in re.finditer(r"\[\[file[\s]*?(\S*?)[\s]*?\|([\S\s]*?)\]\]", text, re.MULTILINE):
+            original_filename = file.group(1)
+            alt_text = file.group(2)
+            if file_prefix is None:
+                filename = original_filename
+            else:
+                filename = file_prefix + original_filename
+            text = text.replace(file.group(0), f"[[Media:{filename}|{alt_text}]]")
+            linked_files.append(original_filename)
+
         # START TABLE
         for table in re.finditer(r"\[\[table([\s\S ]*?)\]\]", text):
             #text = text.replace(table.group(0), "{|" + table.group(1))

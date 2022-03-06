@@ -45,3 +45,7 @@ Testing
 -------
 
 Run `pytest` to run all automated tests.
+
+Run `pytest test_wikidot.py` to run the automated tests for converting Wikidot's format to MediaWiki's format.
+
+Run `pytest test_mediawiki.py` to run the automated tests for interacting with a MediaWiki site.

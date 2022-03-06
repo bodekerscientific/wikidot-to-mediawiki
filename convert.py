@@ -66,7 +66,8 @@ class ConversionController():
             text = f.read()
             base_filename = input_file.stem
 
-            converted_text, internal_links, linked_files = self.__converter.convert(text)
+            file_prefix = base_filename+"__"
+            converted_text, internal_links, linked_files = self.__converter.convert(text, file_prefix=file_prefix)
             internal_links_map[base_filename] = internal_links
             output_file = dest_dir / (base_filename+'.mktxt')
             self.write_unicode_file(output_file, converted_text)
@@ -115,8 +116,9 @@ class ConversionController():
                         print("  And the two files are different.")
                         raise Exception(message)
 
-                print(f"  Copying {associated_path}")
-                shutil.copy(associated_path, upload_dir)
+                upload_path = upload_dir / (file_prefix+associated_path.name)
+                print(f"  Copying {associated_path} to {upload_path}")
+                shutil.copy(associated_path, upload_path)
 
 
 
