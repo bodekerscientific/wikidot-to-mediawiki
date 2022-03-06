@@ -77,17 +77,16 @@ class WikidotToMediaWiki():
             text = text.replace(gallery.group(0), replacement_gallery)
 
         # File
-        for file in re.finditer(r"\[\[file[\s]*([\S\s]*?)\]\]", text, re.MULTILINE):
+        for file in re.finditer(r"\[\[file[\s]*([\S\s]*?)[\s]*\]\]", text, re.MULTILINE):
             file_contents = file.group(1)
             # Check for existance of alternative text
-            pattern = re.compile(r"([\S\s]*?)\|[\s]*([\S\s]*)")
+            pattern = re.compile(r"([\S\s]*?)\|[\s]*([\S\s]*?)")
             match = pattern.fullmatch(file_contents)
             if match is not None:
                 # Contents contains alternative text
                 original_filename = match.group(1)
                 filename = file_prefix + original_filename
                 alt_text = match.group(2)
-                print("alt_text:", alt_text)
                 replacement_contents = f"[[Media:{filename}|{alt_text}]]"
             else:
                 # Contents must be only the filename
