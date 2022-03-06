@@ -6,9 +6,8 @@
 # Improved 2016 by Christopher Mitchell
 # https://github.com/KermMartian/wikidot-to-markdown
 
-import regex as re ## The most important module here!
+import regex as re
 import uuid			## to generate random UUIDs using uuid.uuid4()
-import postprocess	## Custom postprocessing
 
 class WikidotToMediaWiki():
     def __init__(self):
@@ -157,8 +156,5 @@ class WikidotToMediaWiki():
 
         # Repair starting newlines
         text = text.strip()
-
-        # Optional postprocessing stage
-        text = postprocess.postprocess(text)	
 
         return text, internal_links, linked_files
