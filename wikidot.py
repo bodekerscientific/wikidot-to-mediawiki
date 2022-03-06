@@ -57,8 +57,11 @@ class WikidotToMediaWiki():
             text = text.replace(inlink.group(0), "[["+inlink.group(1)+"]]")
             internal_links.append(inlink.group(1))
         # IMAGES
-        for image in re.finditer(r"\[\[image([\s\S ]*?)\]\]", text):
+        linked_files = []
+        #for image in re.finditer(r"\[\[image ([\s\S ]*?)\]\]", text):
+        for image in re.finditer(r"\[\[image ([\S\s ]+?) ([\S\s ]*?)\]\]", text):
             text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
+            linked_files.append(image.group(1))
         # START TABLE
         for table in re.finditer(r"\[\[table([\s\S ]*?)\]\]", text):
             #text = text.replace(table.group(0), "{|" + table.group(1))
@@ -127,13 +130,13 @@ class WikidotToMediaWiki():
             fixup = text[startpos + 1 : endpos].replace("||~", "!!")
             fixup = fixup.split("\n")
             fixout = ["", "{| class=\"wikitable\""]
-            for i in xrange(len(fixup)):
+            for i in range(len(fixup)):
                 if fixup[i][0 : 2] == "||" or fixup[i][0 : 2] == "!!":
                     out = fixup[i].strip()[1 : ]
                     fixout.append(out[ : -2 if out[-2 : ] in ["||", "!!"] else 0])
                 else:
-                    print("Failed to parse item %d/%d: '%s'" % (i, len(fixup), fixup[i]))
-                    sys.exit(-1)
+                    message = "Failed to parse item %d/%d: '%s'" % (i, len(fixup), fixup[i])
+                    raise Exception(message)
                 fixout.append("|}" if i == len(fixup) - 1 else "|-")
 
             # Construct output table text
@@ -150,4 +153,4 @@ class WikidotToMediaWiki():
         # Optional postprocessing stage
         text = postprocess.postprocess(text)	
 
-        return text, internal_links
+        return text, internal_links, linked_files
