@@ -48,3 +48,27 @@ def test_complex_images():
     print("result:", result)
     assert result == expected
     assert linked_files == ["filename.png"]
+
+def test_gallery():
+    text = "This is a gallery of images:\n[[gallery]]\n: image1.png\n: image2.jpg\n[[/gallery]]"
+    expected = "This is a gallery of images:\n<gallery>\nimage1.png\nimage2.jpg\n</gallery>"
+    instance = WikidotToMediaWiki()
+    result, _, linked_files = instance.convert(text)
+    print("result:", result)
+    assert result == expected
+    assert linked_files == ["image1.png", "image2.jpg"]
+
+def test_complex_gallery():
+    text = (
+        'This is a gallery of images:\n'
+        + '[[gallery size="small"]]\n'
+        + ': image1.png alt="Alternative text"\n'
+        + ': image2.jpg width="200px"\n'
+        + '[[/gallery]]'
+    )
+    expected = "This is a gallery of images:\n<gallery>\nimage1.png\nimage2.jpg\n</gallery>"
+    instance = WikidotToMediaWiki()
+    result, _, linked_files = instance.convert(text)
+    print("result:", result)
+    assert result == expected
+    assert linked_files == ["image1.png", "image2.jpg"]

@@ -6,8 +6,7 @@
 # Improved 2016 by Christopher Mitchell
 # https://github.com/KermMartian/wikidot-to-markdown
 
-import re ## The most important module here!
-import string ## for string.join()
+import regex as re ## The most important module here!
 import uuid			## to generate random UUIDs using uuid.uuid4()
 import postprocess	## Custom postprocessing
 
@@ -58,10 +57,20 @@ class WikidotToMediaWiki():
             internal_links.append(inlink.group(1))
         # IMAGES
         linked_files = []
-        #for image in re.finditer(r"\[\[image ([\s\S ]*?)\]\]", text):
         for image in re.finditer(r"\[\[image ([\S\s ]+?) ([\S\s ]*?)\]\]", text):
             text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
             linked_files.append(image.group(1))
+        # Gallery
+        for gallery in re.finditer(r"\[\[gallery\]\]([\S\s ]*)\[\[/gallery\]\]", text, re.MULTILINE):
+            replacement_gallery = "<gallery>\n"
+            print("gallery found!:", gallery.group(1))
+            gallery_content = gallery.group(1)
+            for filename_match in re.finditer(r"^: ([\S]*)", gallery_content, re.MULTILINE):
+                filename = filename_match.group(1)
+                replacement_gallery += filename + "\n"
+                linked_files.append(filename)
+            replacement_gallery += "</gallery>"
+            text = text.replace(gallery.group(0), replacement_gallery)
         # START TABLE
         for table in re.finditer(r"\[\[table([\s\S ]*?)\]\]", text):
             #text = text.replace(table.group(0), "{|" + table.group(1))
