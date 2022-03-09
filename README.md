@@ -2,7 +2,7 @@
 
 This repository contains two programs, a conversion program and an upload program.
 
-The conversion program (`convert.py`) takes backups of Wikidot sites (produced by [Wikidot-tools](https://github.com/bodekerscientific/wikidot_tools)) and produces MediaWiki-formatted text files and attachments that are ready for upload to a MediaWiki site. 
+The conversion program (`convert.py`) takes a backup of a Wikidot site (produced by [Wikidot-tools](https://github.com/bodekerscientific/wikidot_tools)) and produces MediaWiki-formatted text files and attachments that are ready for upload to a MediaWiki site.
 
 The upload program (`upload.py`) takes the output of the converter and uploads the data to a MediaWiki site.
 
@@ -14,7 +14,7 @@ There are three key steps in moving a Wikidot-based wiki to a MediaWiki-based wi
 1. Convert the Wikidot-based backup to a collection of files ready for MediaWiki.
 2. Upload the collection of files to MediaWiki.
 
-## Step 0: Backup
+### Step 0: Backup
 
 We assume that you have already backed up your Wikidot site using [Wikidot-tools](https://github.com/bodekerscientific/wikidot_tools).
 
