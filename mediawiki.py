@@ -73,11 +73,13 @@ class MediaWiki:
         response = self._session.post(self._endpoint, data=params, verify=False)
         data = response.json()
 
-        print("data:", data)
-        if "error" in data:
+        try:
+            result = data["edit"]["result"]
+            assert result == "Success"
+        except:
             raise Exception("Failed to create page: "+str(data))
 
-    def upload_file(self, filename, path):
+    def upload_file(self, filename, path, exists_ok=True):
         edit_token = self._get_edit_token()
 
         params = {
@@ -99,6 +101,16 @@ class MediaWiki:
         )
 
         data = response.json()
-        print(data)
 
-        return data
+        try:
+            # If an identical copy already exists on the server, we'll consider that success
+            if "error" in data:
+                error_code = data["error"]["code"]
+                if error_code == "fileexists-no-change":
+                    print("  An identical copy of the file has already been uploaded")
+                    return
+            # Check for success
+            result = data["upload"]["result"]
+            assert result == "Success"
+        except:
+            raise Exception("Failed to upload file: "+str(data))

@@ -1,9 +1,13 @@
+from datetime import datetime
 from mediawiki import MediaWiki
 import SECRETS
 
 def test_create_page():
     title = "Testing the API-based creation of a page"
-    text = "This page was created by wikidot-to-mediawiki.  You may delete this page."
+    text = (
+        "This page was created by wikidot-to-mediawiki.  You may delete this page.\n"
+        + f"Page created {datetime.now()}."
+    )
     instance = MediaWiki(SECRETS.endpoint, verify=SECRETS.verify)
     _ = instance.login(SECRETS.bot_username, SECRETS.bot_password)
     instance.create_page(title, text)
@@ -16,6 +20,7 @@ def test_upload_file():
         f.write(
             "This file was created by wikidot-to-mediawiki to test uploading.\n"
             + "You may delete this file.\n"
+            + f"File created {datetime.now()}."
         )
     
     instance = MediaWiki(SECRETS.endpoint, verify=SECRETS.verify)
@@ -23,4 +28,3 @@ def test_upload_file():
     instance.upload_file("test_upload_file.txt", filename)
 
     # Check that the file was uploaded
-    assert False
