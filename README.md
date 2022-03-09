@@ -4,11 +4,12 @@ This repository contains two programs, a conversion program and an upload progra
 
 The conversion program (`convert.py`) takes backups of Wikidot sites (produced by [Wikidot-tools](https://github.com/bodekerscientific/wikidot_tools)) and produces MediaWiki-formatted text files and attachments that are ready for upload to a MediaWiki site. 
 
-The upload program (`upload.py`) takes the output of the convertor and uploads the data to a MediaWiki site.
+The upload program (`upload.py`) takes the output of the converter and uploads the data to a MediaWiki site.
 
 ## How to Use
 
 There are three key steps in moving a Wikidot-based wiki to a MediaWiki-based wiki:
+
 0. Backup the Wikidot site using [Wikidot-tools](https://github.com/bodekerscientific/wikidot_tools).
 1. Convert the Wikidot-based backup to a collection of files ready for MediaWiki.
 2. Upload the collection of files to MediaWiki.
@@ -17,7 +18,7 @@ There are three key steps in moving a Wikidot-based wiki to a MediaWiki-based wi
 
 We assume that you have already backed up your Wikidot site using [Wikidot-tools](https://github.com/bodekerscientific/wikidot_tools).
 
-For every page in the Wikidot site, the backup produces a list of `.txt` files that are formatted in [Wikidot's Wikitext syntax](https://www.wikidot.com/doc-wiki-syntax:start).  It also produces `.html` and `.xml` files; these are ignored.
+For every page in the Wikidot site, the backup produces a list of `.txt` files that are formatted in [Wikidot's Wikitext syntax](https://www.wikidot.com/doc-wiki-syntax:start).  It also produces `.html` and `.xml` files; the converter isgnores these files..
 
 For every page in the Wikidot site, the backup may also produce a directory with the same name as the page.  This directory contains files that were associated with the page.
 
@@ -41,13 +42,13 @@ This process works well, but does not always work perfectly.  Inconsistent synta
 
 The conversion program also considers the files associated with each page.  They are renamed and saved in a single directory (_dest_/files_to_upload).  References to these new filenames are used in the converted pages.
 
-If a file is found in the associated directory that is not referenced in the original page, then a new section will be added to the text listing that file.  This way upload files will not be orphaned from their associated pages.
+If a file is found in the associated directory that is not referenced in the original page, then a new section will be added to the text of the converted page that lists that file.  This way upload files will not be orphaned from their associated pages.
 
 A report (`wikidot-to-mediawiki-report.mktxt`) is produced is the _dest_ directory listing the pages that were processed by the converter.
 
 ### Step 2: Upload
 
-To upload the converted Wikidot pages to your MediaWiki-based site, you'll need the address of your site and a bot login.  This data needs to be saved into a file called `SECRETS.py`.
+To upload the converted Wikidot pages to your MediaWiki-based site, you'll need the address of your site's API endpoint and a bot login.  This data needs to be saved into a file called `SECRETS.py`.
 
 First, create the file `SECRETS.py` in this directory.  Below is an example of its contents:
 
@@ -56,9 +57,9 @@ First, create the file `SECRETS.py` in this directory.  Below is an example of i
     bot_password = "BotPassword"
     verify = True # Set to False if your site does not have a valid SSL certificate
 
-The endpoint is the API endpoint for your MediaWiki-based site.  You can obtain the endpoint via the page `Special:ApiSandbox`.  For more detail, see the [MediaWiki API documentation](https://www.mediawiki.org/wiki/API:Main_page).
+The endpoint is the API endpoint for your MediaWiki-based site.  You can obtain the endpoint via the page `Special:ApiSandbox` on your MediaWiki site.  For more detail, see the [MediaWiki API documentation](https://www.mediawiki.org/wiki/API:Main_page).
 
-A bot login can be created at `Special:BotPasswords`; once the login is created, the system will give you the details for `bot_username` and `bot_password`.  You will need to give the bot login the rights to:
+A bot login can be created at `Special:BotPasswords` on your MediaWiki site; once the login is created, the system will give you the details for `bot_username` and `bot_password`.  You will need to give the bot login the rights to:
 * high-volume editing
 * create, edit, and move pages
 * upload new files
@@ -77,4 +78,4 @@ Run `pytest` to run all automated tests.
 
 Run `pytest test_wikidot.py` to run the automated tests for converting Wikidot's format to MediaWiki's format.
 
-Run `pytest test_mediawiki.py` to run the automated tests for interacting with your MediaWiki site.
+Run `pytest test_mediawiki.py` to run the automated tests for interacting with your MediaWiki site.  These tests may place files on your MediaWiki site.  For a list of recently added files, see the page `Special:RecentChanges` on your MediaWiki site.
