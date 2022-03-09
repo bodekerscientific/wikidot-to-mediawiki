@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2012 Philipp Klaus
 # Part of https://github.com/vLj2/wikidot-to-markdown
@@ -11,6 +11,7 @@ import codecs			## for codecs.open()
 import argparse
 from pathlib import Path
 import shutil
+from datetime import datetime
 
 from wikidot import WikidotToMediaWiki
 
@@ -135,12 +136,35 @@ class ConversionController():
             output_file = dest_dir / (base_filename+'.mktxt')
             self.write_unicode_file(output_file, converted_text)
 
+        # Find orphaned pages
+        orphaned_pages = {page:True for page in internal_links_map.keys()}
+        for _, links in internal_links_map.items():
+            for link in links:
+                if link in orphaned_pages:
+                    orphaned_pages[link] = False
 
+        # Create page of pages that were processed, highlighting orphaned pages
+        processed_pages = (
+            "[https://github.com/bodekerscientific/wikidot-to-mediawiki Wikidot-to-MediaWiki] ran at "
+            + f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.  It processed the following {len(input_files)} pages:\n"
+        )
+        any_orphaned = False
+        pages = sorted(orphaned_pages.keys(), key=str.lower)
+        for page in pages:
+            processed_pages += f"* [[{page}]]"
+            if orphaned_pages[page]:
+                processed_pages += " *"
+                any_orphaned = True
+            processed_pages += "\n"
+        if any_orphaned:
+            processed_pages += "\n<nowiki>*</nowiki> Orphaned page (that is, no pages link to the page).\n"
 
+        print("Writing report of conversion")
+        output_file = dest_dir / "wikidot-to-mediawiki-report.mktxt"
+        self.write_unicode_file(output_file, processed_pages)
 
-
-        print("Internal links:")
         print(internal_links_map)
+
 
     def write_unicode_file(self, path_to_file, content):
         try:
