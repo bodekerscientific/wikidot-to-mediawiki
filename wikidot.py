@@ -53,6 +53,13 @@ class WikidotToMediaWiki():
             text = text[:hashes.start(1)] + ("#" * len(hashes.group(1))) + text[hashes.end(1):]
 
         # Internal links -- replace [[[internal link]]] with [[internal link]]
+        def convert_internal_link(link):
+            # Convert underscores and at-signs to hypens (because that's what Wikidot did)
+            link = re.sub(r"[_@]", r"-", link)
+            # Convert link to lower case
+            link = link.lower()
+            return link
+
         internal_links = []
         for inlink in re.finditer(r"\[\[\[([\s\S]*?)\]\]\]", text):
             inlink_contents = inlink.group(1)
@@ -61,17 +68,17 @@ class WikidotToMediaWiki():
             match = pattern.fullmatch(inlink_contents)
             if match is not None:
                 # Contents contains alternative text
-                internal_page = match.group(1)
+                internal_page = convert_internal_link(match.group(1))
                 alt_text = match.group(2)
                 replacement_contents = f"[[{internal_page}|{alt_text}]]"
             else:
                 # Contents must be only the name of the internal page
-                internal_page = inlink_contents
+                internal_page = convert_internal_link(inlink_contents)
                 replacement_contents = f"[[{internal_page}]]"
             text = text.replace(inlink.group(0), replacement_contents)
             internal_links.append(internal_page)
 
-        # IMAGES
+        # Image
         linked_files = []
         for image in re.finditer(r"\[\[image ([\S]*)([\S\s ]*?)\]\]", text):
             original_filename = image.group(1)
@@ -107,7 +114,7 @@ class WikidotToMediaWiki():
                 # Contents must be only the filename
                 original_filename = file_contents
                 filename = file_prefix + original_filename
-                replacement_contents = f"[[Media:{filename}]]"
+                replacement_contents = f"[[Media:{filename}|{filename}]]"
             text = text.replace(file.group(0), replacement_contents)
             linked_files.append(original_filename)
 

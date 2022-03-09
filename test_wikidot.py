@@ -31,6 +31,51 @@ def test_internal_link_with_alt_text():
     assert result == expected
     assert links == ["internal page"]
 
+def test_internal_link_with_underscores():
+    # Wikidot internal links have underscores converted to hypens 
+    text = "[[[internal_page | alternative text]]]"
+    expected = "[[internal-page|alternative text]]"
+    instance = WikidotToMediaWiki()
+    result, links, _ = instance.convert(text)
+    assert result == expected
+    assert links == ["internal-page"]
+
+def test_internal_link_with_capitals():
+    # Wikidot internal links have all characters converted to lower case 
+    text = "[[[Internal Page | alternative text]]]"
+    expected = "[[internal page|alternative text]]"
+    instance = WikidotToMediaWiki()
+    result, links, _ = instance.convert(text)
+    assert result == expected
+    assert links == ["internal page"]
+
+def test_internal_link_with_at_sign():
+    # Wikidot internal links have at-signs converted to hypens 
+    text = "[[[internal@page | alternative text]]]"
+    expected = "[[internal-page|alternative text]]"
+    instance = WikidotToMediaWiki()
+    result, links, _ = instance.convert(text)
+    assert result == expected
+    assert links == ["internal-page"]
+
+def test_internal_link_with_underscores_and_at_sign():
+    # Wikidot internal links have at-signs and underscores converted to hypens 
+    text = "[[[internal@page_with_underscores | alternative text]]]"
+    expected = "[[internal-page-with-underscores|alternative text]]"
+    instance = WikidotToMediaWiki()
+    result, links, _ = instance.convert(text)
+    assert result == expected
+    assert links == ["internal-page-with-underscores"]
+
+def test_internal_link_with_at_sign_and_spaces():
+    # Wikidot internal links have at-signs converted to hypens 
+    text = "[[[internal@page with spaces | alternative text]]]"
+    expected = "[[internal-page with spaces|alternative text]]"
+    instance = WikidotToMediaWiki()
+    result, links, _ = instance.convert(text)
+    assert result == expected
+    assert links == ["internal-page with spaces"]
+
 def test_code():
     text = 'This is a code block: [[code type="python"]]1 + 2 == 3[[/code]]'
     expected = "This is a code block: \n <nowiki>1 + 2 == 3</nowiki>"
@@ -39,7 +84,7 @@ def test_code():
     print("result:", result)
     assert result == expected
 
-def test_linked_files():
+def test_image():
     text = "This is a link to an image: [[image filename.png]]"
     expected = "This is a link to an image: [[File:filename.png]]"
     instance = WikidotToMediaWiki()
