@@ -49,16 +49,29 @@ def main():
             )
     
     # Upload files
+    failed_uploads = []
     for file_path in file_paths:
         print(f"Uploading file {file_path.name}")
-        # Hide repeated SSL certificate warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            wiki.upload_file(
-                filename=file_path.name,
-                path=file_path
-            )
+        try:
+            # Hide repeated SSL certificate warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                wiki.upload_file(
+                    filename=file_path.name,
+                    path=file_path
+                )
+        except Exception as e:
+            print("  Failed")
+            failed_uploads.append({
+                "filename":file_path.name, 
+                "error": str(e)
+            })
 
+    # Output list of failures
+    if len(failed_uploads) > 0:
+        print("The following files failed to upload:")
+        for failed_upload in failed_uploads:
+            print(f"  {failed_upload['filename']}: {failed_upload['error']}")
 
 if __name__ == '__main__':
     main()
