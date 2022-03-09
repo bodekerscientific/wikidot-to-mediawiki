@@ -1,74 +1,170 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2012 Philipp Klaus
 # Part of https://github.com/vLj2/wikidot-to-markdown
 # Improved 2016 by Christopher Mitchell
 # https://github.com/KermMartian/wikidot-to-markdown
+# Improved 2022 by Matthew Walker
+# https://github.com/bodekerscientific/wikidot-to-mediawiki
 
-from wikidot import WikidotToMarkdown ## most important here
-
-import sys				## for sys.exit()
-import os				## for os.makedirs()
-import optparse			## for optparse.OptionParser()
-import markdown			## for markdown.markdown()
 import codecs			## for codecs.open()
-import datetime as dt	## for dt.datetime() and dt.datetime.now()
-import time				## for time.sleep()
+import argparse
+from pathlib import Path
+import shutil
+from datetime import datetime
 
-DEFAULT_OUTPUT_DIR = "output"
-SLEEP_TIME = 0 # seconds to sleep after each post sent to the blog (if you use your own server, set this to 0)
+from wikidot import WikidotToMediaWiki
 
-class ConversionController(object):
-    def __init__(self, options):
-        self.__input_wiki_file = options.filename
-        self.__output_directory = options.output_dir
-        self.__fill_blog = options.blog
-        self.__create_individual_files = options.individual
-        self.__converter = WikidotToMarkdown()
 
-    def __prepare_output_dir(self):
-        try:
-            os.makedirs(self.__output_directory)
-        except OSError as ex:
-            print("Could not create output folder "+self.__output_directory+".")
-            if ex.errno == os.errno.EEXIST: print("It already exists.")
-            else: 
-                print("Error %i: %s" % (ex.errno, str(ex)))
-                sys.exit(1)
+class ConversionController():
+    def __init__(self, arguments):
+        # self.__input_wiki_file = options.filename
+        # self.__output_directory = options.output_dir
+        # self.__fill_blog = options.blog
+        # self.__create_individual_files = options.individual
+        self.__converter = WikidotToMediaWiki()
+        self.__args = arguments
 
-    def convert(self):
-        self.__prepare_output_dir()
-        f = codecs.open(self.__input_wiki_file, encoding='utf-8')
-        text = f.read()
-        base_filename = os.path.splitext(os.path.basename(self.__input_wiki_file))[0]
-        
-        # write the complete files to the output directory:
-        complete_text = self.__converter.convert(text)
-        self.write_unicode_file("%s/%s" % (self.__output_directory, base_filename+'.mktxt'),complete_text)
+    def __process_source(self, source):
+        source = Path(source)
+        if source.is_dir():
+            input_files = sorted(source.glob("*.txt"))
+        elif source.is_file():
+            input_files = [source]
+        else:
+            raise Exception(f"Source ({source}) should be either a directory or file")
 
-        # now handle the texts split to little junks:
-        if self.__create_individual_files:
-            parts = self.__converter.split_text(text)
-            if len(parts) < 2: return # we need at least 2 entries (the first part is trashed and one part with content!)
-            i=0
-            for text_part in parts:
-                text_part =  self.__converter.convert(text_part)
-                i += 1
-                if i == 1:
-                    print("\nAttention! We skip the first output part (when splitting the text into parts):\n\n%s" % text_part)
+        print("Input files:")
+        for input_file in input_files:
+            print(f"  {input_file}")
+
+        return input_files
+
+    def __process_dest(self, dest):
+        dest_dir = Path(dest)
+        if dest_dir.is_file():
+            raise Exception("Destination is not a directory")
+
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        print("Output directory:")
+        print(f"  {dest_dir}")
+        return dest_dir
+
+    def convert(self, source, dest):
+        input_files = self.__process_source(source)
+        dest_dir = self.__process_dest(dest)
+        internal_links_map = {}
+
+        if self.__args.include_associated_xml_files:
+            print("Including XML files in directories of associated files.")
+        else:
+            print("Ignoring XML files in directories of associated files.")
+
+        for input_file in input_files:
+            print(f"Processing {input_file}")
+            f = codecs.open(input_file, encoding='utf-8')
+            text = f.read()
+            base_filename = input_file.stem
+
+            file_prefix = base_filename+"__"
+            converted_text, internal_links, linked_files = self.__converter.convert(text, file_prefix=file_prefix)
+            internal_links_map[base_filename] = internal_links
+
+            # Get associated files
+            associated_dir = input_file.parent / input_file.stem
+            if not associated_dir.is_dir():
+                print(f"  Did not find directory of associated files at {associated_dir}")
+                associated_files = []
+                associated_paths = []
+            else:
+                associated_paths = sorted(associated_dir.glob("*"))
+                associated_files = [f.name for f in associated_paths]
+
+            # Check that all files linked in the text can be found in the associated files
+            for linked_file in linked_files:
+                if linked_file not in associated_files:
+                    print("  Linked file not found in associated dir:", linked_file)
+
+            # Check that all associated files have been linked
+            unlinked_associated_files = []
+            for associated_file in associated_files:
+                if associated_file not in linked_files:
+                    xml_file = associated_file.split(".")[-1] == "xml"
+                    if xml_file and not self.__args.include_associated_xml_files:
+                        continue
+                    print("  Associated file not found in linked files:", associated_file)
+                    unlinked_associated_files.append(associated_file)
+
+            # Add any unlinked associated files to text
+            if len(unlinked_associated_files) > 0:
+                appendix = (
+                    "\n== Unlinked Associated Files ==\n"
+                    + "In Wikidot, there were files associated with this page that were not linked in the text above:\n"
+                )
+                for unlinked_associated_file in unlinked_associated_files:
+                    appendix += "* [[Media:"+file_prefix+unlinked_associated_file+"|"+unlinked_associated_file+"]]\n"
+                converted_text = converted_text + appendix
+                print("  Added appendix to converted text listing unlinked associated files")
+
+            # Copy all associated files to upload
+            upload_dir = dest_dir / "files_to_upload"
+            upload_dir.mkdir(parents=True, exist_ok=True)
+            existing_files = [f.name for f in sorted(upload_dir.glob("*"))]
+            for associated_path in associated_paths:
+                xml_file = associated_path.suffix == ".xml"
+                if xml_file and not self.__args.include_associated_xml_files:
                     continue
-                if self.__create_individual_files:
-                    self.write_unicode_file(
-                        os.path.join(self.__output_directory, "%s/%i%s" % (i, '.mktxt')), 
-                        text_part
-                    )
-                lines = text_part.split("\n")
-                if self.__fill_blog:
-                    title = lines[0].replace("# ","")
-                    content = string.join(lines[1:],'\n')
-                    date = dt.datetime(start[0],start[1],start[2], 17, 11, 11) + dt.timedelta(int((i-2)*gradient))
-                    wprb.post_new(title, content,[],'','private',date)
-                    time.sleep(SLEEP_TIME)
+                if associated_path.name in existing_files:
+                    message = f"A file with the name {associated_path.name} already exists in {upload_dir}."
+                    print("  "+message)
+                    # Check if the files are identical
+                    associated_bytes = associated_path.read_bytes()
+                    upload_bytes = (upload_dir / associated_path.name).read_bytes()
+                    if associated_bytes == upload_bytes:
+                        print("  But the two files are identical.")
+                        continue
+                    else:
+                        print("  And the two files are different.")
+                        raise Exception(message)
+
+                upload_path = upload_dir / (file_prefix+associated_path.name)
+                print(f"  Copying {associated_path} to {upload_path}")
+                shutil.copy(associated_path, upload_path)
+
+            # Write converted text
+            output_file = dest_dir / (base_filename+'.mktxt')
+            self.write_unicode_file(output_file, converted_text)
+
+        # Find orphaned pages
+        orphaned_pages = {page:True for page in internal_links_map.keys()}
+        for _, links in internal_links_map.items():
+            for link in links:
+                if link in orphaned_pages:
+                    orphaned_pages[link] = False
+
+        # Create page of pages that were processed, highlighting orphaned pages
+        processed_pages = (
+            "[https://github.com/bodekerscientific/wikidot-to-mediawiki Wikidot-to-MediaWiki] ran at "
+            + f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.  It processed the following {len(input_files)} pages:\n"
+        )
+        any_orphaned = False
+        pages = sorted(orphaned_pages.keys(), key=str.lower)
+        for page in pages:
+            processed_pages += f"* [[{page}]]"
+            if orphaned_pages[page]:
+                processed_pages += " *"
+                any_orphaned = True
+            processed_pages += "\n"
+        if any_orphaned:
+            processed_pages += "\n<nowiki>*</nowiki> Orphaned page (that is, no pages link to the page).\n"
+
+        print("Writing report of conversion")
+        output_file = dest_dir / "wikidot-to-mediawiki-report.mktxt"
+        self.write_unicode_file(output_file, processed_pages)
+
+        print(internal_links_map)
+
 
     def write_unicode_file(self, path_to_file, content):
         try:
@@ -79,25 +175,37 @@ class ConversionController(object):
 
 def main():
     """ Main function called to start the conversion."""
-    p = optparse.OptionParser(version="%prog 1.0")
+    #p = optparse.OptionParser(version="%prog 1.0")
+    parser = argparse.ArgumentParser()
 
     # set possible CLI options
-    p.add_option('--save-junks-to-blog', '-b', action="store_true", help="save the individual files as blog posts (only relevant if -s set)", default=False, dest="blog")
-    p.add_option('--save-individual', '-s', action="store_true", help="save individual files for every headline", default=False, dest="individual")
-    p.add_option('--input-file', '-f', metavar="INPUT_FILE", help="Read from INPUT_FILE.", dest="filename")
-    p.add_option('--output-dir', '-o', metavar="OUTPUT_DIRECTORY", help="Save the converted files to the OUTPUT_DIRECTORY.", dest="output_dir")
+    # p.add_option('--save-junks-to-blog', '-b', action="store_true", help="save the individual files as blog posts (only relevant if -s set)", default=False, dest="blog")
+    # p.add_option('--save-individual', '-s', action="store_true", help="save individual files for every headline", default=False, dest="individual")
+    # p.add_option('--input-file', '-f', metavar="INPUT_FILE", help="Read from INPUT_FILE.", dest="filename")
+    # p.add_option('--input-dir', '-d', metavar="INPUT_FILE", help="Read from INPUT_FILE.", dest="filename")
+    # p.add_option('--output-dir', '-o', metavar="OUTPUT_DIRECTORY", help="Save the converted files to the OUTPUT_DIRECTORY.", dest="output_dir")
+    parser.add_argument('source', help="File or directory containing source files from Wikidot site")
+    parser.add_argument('dest', help="Directory to output files converted to MediaWiki format")
+    parser.add_argument(
+        "-x",
+        "--include-associated-xml-files",
+        default=False,
+        action='store_true',
+        help="Include any XML files in the files associated with source files"
+    )
+    arguments = parser.parse_args()
 
     # parse our CLI options
-    options, arguments = p.parse_args()
-    if options.filename == None:
-        p.error("No filename for the input file set. Have a look at the parameters using the option -h.")
-        sys.exit(1)
-    if options.output_dir == None:
-        options.output_dir = raw_input('Please enter an output directory for the converted documents [%s]: ' % DEFAULT_OUTPUT_DIR)
-        if options.output_dir == "": options.output_dir = DEFAULT_OUTPUT_DIR
+    # options, arguments = p.parse_args()
+    # if options.filename == None:
+    #     p.error("No filename for the input file set. Have a look at the parameters using the option -h.")
+    #     sys.exit(1)
+    # if options.output_dir == None:
+    #     options.output_dir = raw_input('Please enter an output directory for the converted documents [%s]: ' % DEFAULT_OUTPUT_DIR)
+    #     if options.output_dir == "": options.output_dir = DEFAULT_OUTPUT_DIR
 
-    converter = ConversionController(options)
-    converter.convert()
+    converter = ConversionController(arguments)
+    converter.convert(arguments.source, arguments.dest)
 
 if __name__ == '__main__':
     main()

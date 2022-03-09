@@ -5,14 +5,13 @@
 # Part of https://github.com/vLj2/wikidot-to-markdown
 # Improved 2016 by Christopher Mitchell
 # https://github.com/KermMartian/wikidot-to-markdown
+# Improved 2022 by Matthew Walker
+# https://github.com/bodekerscientific/wikidot-to-mediawiki
 
-import re ## The most important module here!
-import string ## for string.join()
-#import markdown
+import regex as re
 import uuid			## to generate random UUIDs using uuid.uuid4()
-import postprocess	## Custom postprocessing
 
-class WikidotToMarkdown(object):
+class WikidotToMediaWiki():
     def __init__(self):
         # regex for URL found on http://regexlib.com/REDetails.aspx?regex_id=501
         self.url_regex = r"(http|https|ftp)\://([a-zA-Z0-9\.\-]+(\:[a-zA-Z0-9\.&amp;%\$\-]+)*@)*((25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9])\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[1-9]|0)\.(25[0-5]|2[0-4][0-9]|[0-1]{1}[0-9]{2}|[1-9]{1}[0-9]{1}|[0-9])|localhost|([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9\-]+\.(com|edu|gov|int|mil|net|org|biz|arpa|info|name|pro|aero|coop|museum|[a-zA-Z]{2}))(\:[0-9]+)*(/($|[a-zA-Z0-9\.\,\?\'\\\+&amp;%\$#\=~_\-]+))*[/]?"
@@ -27,7 +26,7 @@ class WikidotToMarkdown(object):
                                   }
         self.regex_split_condition = r"^\+ ([^\n]*)$"
 
-    def convert(self, text):
+    def convert(self, text, file_prefix=""):
         text = '\n'+text+'\n'# add embed in newlines (makes regex replaces work better)
         # first we search for [[code]] statements as we don't want any replacement to happen inside those code blocks!
         code_blocks = dict()
@@ -35,7 +34,7 @@ class WikidotToMarkdown(object):
         for code_block_found in code_blocks_found:
             tmp_hash = str(uuid.uuid4())
             text = text.replace(code_block_found[0],tmp_hash,1) # replace code block with a hash - to fill it in later
-            code_blocks[tmp_hash] = "\n"+string.join([" " + l for l in code_block_found[-1].strip().split("\n") ],"\n")+"\n"
+            code_blocks[tmp_hash] = code_block_found[-1]
         for search, replacement in self.static_replacements.items():
             text = text.replace(search,replacement,1)
             
@@ -52,12 +51,73 @@ class WikidotToMarkdown(object):
         # LISTS(#) -- replace '  #' with '###' and so on
         for hashes in re.finditer(r"^([ \t]+)\*", text, re.MULTILINE):
             text = text[:hashes.start(1)] + ("#" * len(hashes.group(1))) + text[hashes.end(1):]
-        # INTERNAL LINKS -- replace [[[bink]]] with [[bink]]
-        for inlink in re.finditer(r"\[\[\[([\s\S ]*?)\]\]\]", text):
-            text = text.replace(inlink.group(0), "[["+inlink.group(1)+"]]")
-        # IMAGES
-        for image in re.finditer(r"\[\[image([\s\S ]*?)\]\]", text):
-            text = text.replace(image.group(0), "[[File:" + image.group(1) + "]]")
+
+        # Internal links -- replace [[[internal link]]] with [[internal link]]
+        def convert_internal_link(link):
+            # Convert underscores and at-signs to hypens (because that's what Wikidot did)
+            link = re.sub(r"[_@]", r"-", link)
+            # Convert link to lower case
+            link = link.lower()
+            return link
+
+        internal_links = []
+        for inlink in re.finditer(r"\[\[\[([\s\S]*?)\]\]\]", text):
+            inlink_contents = inlink.group(1)
+            # Check for existance of alternative text
+            pattern = re.compile(r"([\S\s]*?)[\s]*\|[\s]*([\S\s]*?)")
+            match = pattern.fullmatch(inlink_contents)
+            if match is not None:
+                # Contents contains alternative text
+                internal_page = convert_internal_link(match.group(1))
+                alt_text = match.group(2)
+                replacement_contents = f"[[{internal_page}|{alt_text}]]"
+            else:
+                # Contents must be only the name of the internal page
+                internal_page = convert_internal_link(inlink_contents)
+                replacement_contents = f"[[{internal_page}]]"
+            text = text.replace(inlink.group(0), replacement_contents)
+            internal_links.append(internal_page)
+
+        # Image
+        linked_files = []
+        for image in re.finditer(r"\[\[image ([\S]*)([\S\s ]*?)\]\]", text):
+            original_filename = image.group(1)
+            filename = file_prefix + original_filename
+            text = text.replace(image.group(0), "[[File:" + filename + "]]")
+            linked_files.append(original_filename)
+
+        # Gallery
+        for gallery in re.finditer(r"\[\[gallery[ \S]*?\]\]([\S\s ]*)\[\[/gallery\]\]", text, re.MULTILINE):
+            replacement_gallery = "<gallery>\n"
+            gallery_content = gallery.group(1)
+            for filename_match in re.finditer(r"^: ([\S]*)", gallery_content, re.MULTILINE):
+                original_filename = filename_match.group(1)
+                filename = file_prefix + original_filename
+                replacement_gallery += filename + "\n"
+                linked_files.append(original_filename)
+            replacement_gallery += "</gallery>"
+            text = text.replace(gallery.group(0), replacement_gallery)
+
+        # File
+        for file in re.finditer(r"\[\[file[\s]*([\S\s]*?)[\s]*\]\]", text, re.MULTILINE):
+            file_contents = file.group(1)
+            # Check for existance of alternative text
+            pattern = re.compile(r"([\S\s]*?)[\s]*\|[\s]*([\S\s]*?)")
+            match = pattern.fullmatch(file_contents)
+            if match is not None:
+                # Contents contains alternative text
+                original_filename = match.group(1)
+                filename = file_prefix + original_filename
+                alt_text = match.group(2)
+                replacement_contents = f"[[Media:{filename}|{alt_text}]]"
+            else:
+                # Contents must be only the filename
+                original_filename = file_contents
+                filename = file_prefix + original_filename
+                replacement_contents = f"[[Media:{filename}|{filename}]]"
+            text = text.replace(file.group(0), replacement_contents)
+            linked_files.append(original_filename)
+
         # START TABLE
         for table in re.finditer(r"\[\[table([\s\S ]*?)\]\]", text):
             #text = text.replace(table.group(0), "{|" + table.group(1))
@@ -82,8 +142,9 @@ class WikidotToMarkdown(object):
                 # end cell tabs are not necessary in mediawiki
                 text = text.replace(end.group(0), "")
 
-        # now we substitute back our code blocks
+        # Substitute back our code blocks
         for tmp_hash, code in code_blocks.items():
+            code = "\n <nowiki>"+code+"</nowiki>"
             text = text.replace(tmp_hash, code, 1)
 
         # Process color corrections
@@ -125,13 +186,13 @@ class WikidotToMarkdown(object):
             fixup = text[startpos + 1 : endpos].replace("||~", "!!")
             fixup = fixup.split("\n")
             fixout = ["", "{| class=\"wikitable\""]
-            for i in xrange(len(fixup)):
+            for i in range(len(fixup)):
                 if fixup[i][0 : 2] == "||" or fixup[i][0 : 2] == "!!":
                     out = fixup[i].strip()[1 : ]
                     fixout.append(out[ : -2 if out[-2 : ] in ["||", "!!"] else 0])
                 else:
-                    print("Failed to parse item %d/%d: '%s'" % (i, len(fixup), fixup[i]))
-                    sys.exit(-1)
+                    message = "Failed to parse item %d/%d: '%s'" % (i, len(fixup), fixup[i])
+                    raise Exception(message)
                 fixout.append("|}" if i == len(fixup) - 1 else "|-")
 
             # Construct output table text
@@ -145,16 +206,4 @@ class WikidotToMarkdown(object):
         # Repair starting newlines
         text = text.strip()
 
-        # Optional postprocessing stage
-        text = postprocess.postprocess(text)	
-
-        return text
-
-    def split_text(self, text):
-        output_parts = []
-        split_regex = re.compile(self.regex_split_condition)
-        for line in text.split("\n"):
-            line += "\n"
-            if len(output_parts) > 0 and (re.match(split_regex,line) == None): output_parts[-1] += line
-            else: output_parts.append(line)
-        return output_parts
+        return text, internal_links, linked_files
