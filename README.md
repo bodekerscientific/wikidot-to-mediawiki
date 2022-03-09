@@ -18,7 +18,7 @@ There are three key steps in moving a Wikidot-based wiki to a MediaWiki-based wi
 
 We assume that you have already backed up your Wikidot site using [Wikidot-tools](https://github.com/bodekerscientific/wikidot_tools).
 
-For every page in the Wikidot site, the backup produces a list of `.txt` files that are formatted in [Wikidot's Wikitext syntax](https://www.wikidot.com/doc-wiki-syntax:start).  It also produces `.html` and `.xml` files; the converter isgnores these files..
+For every page in the Wikidot site, the backup produces a list of `.txt` files that are formatted in [Wikidot's Wikitext syntax](https://www.wikidot.com/doc-wiki-syntax:start).  It also produces `.html` and `.xml` files; the converter ignores these files.
 
 For every page in the Wikidot site, the backup may also produce a directory with the same name as the page.  This directory contains files that were associated with the page.
 
@@ -70,6 +70,8 @@ If your site does not have an SSL certificate, or if the certificate is self-sig
 Continuing with our example, once the `SECRETS.py` file is ready, you can run the upload program with the command:
 
     ./upload.py conversion
+
+The conversion of your Wikidot-based site will now be found on your MediaWiki site.  To look at the list of recently added files, see the page `Special:RecentChanges` on your MediaWiki site.
 
 Testing
 -------
