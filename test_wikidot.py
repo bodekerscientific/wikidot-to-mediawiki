@@ -128,7 +128,7 @@ def test_complex_gallery():
 
 def test_file():
     text = "This is a file: [[file filename]]"
-    expected = "This is a file: [[Media:filename]]"
+    expected = "This is a file: [[Media:filename|filename]]" # The alt text is added to improve the MediaWiki formatting
     instance = WikidotToMediaWiki()
     result, _, linked_files = instance.convert(text)
     assert result == expected
@@ -182,7 +182,7 @@ def test_file_excessive_matching():
     )
     expected = (
         "If I have the contents, say 'file filename' outside of a tag, it should not be replaced"
-        + " when I have a file tag with the same contents [[Media:filename]]."
+        + " when I have a file tag with the same contents [[Media:filename|filename]]."
     )
     instance = WikidotToMediaWiki()
     result, _, linked_files = instance.convert(text)
