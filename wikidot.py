@@ -8,7 +8,6 @@
 # Improved 2022 by Matthew Walker
 # https://github.com/bodekerscientific/wikidot-to-mediawiki
 
-from turtle import title
 import regex as re
 import uuid			## to generate random UUIDs using uuid.uuid4()
 
