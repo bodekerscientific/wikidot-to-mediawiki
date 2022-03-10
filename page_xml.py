@@ -7,7 +7,7 @@ def get_text(nodelist):
             rc.append(node.data)
     return ''.join(rc)
 
-class PageXML:
+class PageXMLParser:
     def __init__(self, xml):
         self._dom = parseString(xml)
 

@@ -15,6 +15,13 @@ def main():
         default="SECRETS.py",
         help="File containing the location and credentials of the MediaWiki site"
     )
+    parser.add_argument(
+        "--only-pages",
+        default=False,
+        action='store_true',
+        help="Only upload pages (don't upload any files)"
+    )
+
     arguments = parser.parse_args()
 
     # Process secrets file
@@ -48,6 +55,10 @@ def main():
                 text=page_path.read_text()
             )
     
+    if arguments.only_pages:
+        print("Not uploading any files as the option --only-pages was set")
+        return
+        
     # Upload files
     failed_uploads = []
     for file_path in file_paths:
