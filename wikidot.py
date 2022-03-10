@@ -23,6 +23,8 @@ class WikidotToMediaWiki():
                                     r'([^:])\[!--([\s\S ]*?)--\]': r"\1<!--\2-->", # comments
                                     r'([^:])__([\s\S ]*?)__': r"\1'''\2'''", # underlining → bold
                                     #r'([^:]){{([\s\S ]*?)}}': r'\1`\2`', # inline monospaced text
+                                    r'\[\[size\s*\S*?\]\]': r'', # ignore text sizing
+                                    r'\[\[/size\s*?\]\]' : r'',  # ignore text sizing
                                   }
         self.regex_split_condition = r"^\+ ([^\n]*)$"
 

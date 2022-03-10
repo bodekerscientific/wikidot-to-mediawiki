@@ -7,6 +7,13 @@ def test_plain_text():
     result, _, _ = instance.convert(text)
     assert result == expected
 
+def test_text_size():
+    text = "This is some [[size 180%]]re-sized text[[/size]]."
+    expected = "This is some re-sized text."
+    instance = WikidotToMediaWiki()
+    result, _, _ = instance.convert(text)
+    assert result == expected
+
 # Internal Link
 # =============
 
