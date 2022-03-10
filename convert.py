@@ -13,7 +13,10 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 
+import regex
+
 from wikidot import WikidotToMediaWiki
+from page_xml import PageXMLParser
 
 
 class ConversionController():
@@ -25,7 +28,18 @@ class ConversionController():
         self.__converter = WikidotToMediaWiki()
         self.__args = arguments
 
-    def __process_source(self, source):
+    def __get_xml_files(self, source):
+        source = Path(source)
+        if source.is_dir():
+            xml_files = sorted(source.glob("*.xml"))
+        elif source.is_file():
+            xml_files = [source.parent / (source.stem+".xml")]
+        else:
+            raise Exception(f"Source ({source}) should be either a directory or file")
+
+        return xml_files
+
+    def __get_text_files(self, source):
         source = Path(source)
         if source.is_dir():
             input_files = sorted(source.glob("*.txt"))
@@ -34,7 +48,7 @@ class ConversionController():
         else:
             raise Exception(f"Source ({source}) should be either a directory or file")
 
-        print("Input files:")
+        print("Input files for pages:")
         for input_file in input_files:
             print(f"  {input_file}")
 
@@ -52,7 +66,8 @@ class ConversionController():
         return dest_dir
 
     def convert(self, source, dest):
-        input_files = self.__process_source(source)
+        input_files = self.__get_text_files(source)
+        xml_files = self.__get_xml_files(source)
         dest_dir = self.__process_dest(dest)
         internal_links_map = {}
 
@@ -61,15 +76,34 @@ class ConversionController():
         else:
             print("Ignoring XML files in directories of associated files.")
 
+        # Go through the xml files.  Obtain a map from filename to title
+        print(f"Processing metadata from XML files:")
+        fullname_to_title = {}
+        for xml_file in xml_files:
+            page_xml_parser = PageXMLParser(xml_file.read_text())
+            title = page_xml_parser.title
+            #title = regex.sub(" ", "_", title)
+            fullname = page_xml_parser.fullname
+            print(f"  {fullname}: '{title}'")
+            fullname_to_title[fullname] = title
+
+        # Go through the txt files
         for input_file in input_files:
-            print(f"Processing {input_file}")
+            print(f"Processing page {input_file.stem}")
+
+            # Read associated XML file to obtain the fullname and title.  Hypens and spaces make 
+            # it impossible to automatically convert from the fullname to the title.
+
             f = codecs.open(input_file, encoding='utf-8')
             text = f.read()
             base_filename = input_file.stem
+            assert base_filename in fullname_to_title
 
             file_prefix = base_filename+"__"
-            converted_text, internal_links, linked_files = self.__converter.convert(text, file_prefix=file_prefix)
-            internal_links_map[base_filename] = internal_links
+            converted_text, internal_links, linked_files = self.__converter.convert(
+                text, file_prefix=file_prefix, fullname_to_title=fullname_to_title
+            )
+            internal_links_map[fullname_to_title[base_filename]] = internal_links
 
             # Get associated files
             associated_dir = input_file.parent / input_file.stem
@@ -133,7 +167,8 @@ class ConversionController():
                 shutil.copy(associated_path, upload_path)
 
             # Write converted text
-            output_file = dest_dir / (base_filename+'.mktxt')
+            output_file = dest_dir / (fullname_to_title[base_filename]+'.mktxt')
+            print(f"  Writing {output_file}")
             self.write_unicode_file(output_file, converted_text)
 
         # Find orphaned pages
@@ -160,7 +195,7 @@ class ConversionController():
             processed_pages += "\n<nowiki>*</nowiki> Orphaned page (that is, no pages link to the page).\n"
 
         print("Writing report of conversion")
-        output_file = dest_dir / "wikidot-to-mediawiki-report.mktxt"
+        output_file = dest_dir / "Wikidot_to_MediaWiki_report.mktxt"
         self.write_unicode_file(output_file, processed_pages)
 
         print(internal_links_map)
@@ -175,15 +210,8 @@ class ConversionController():
 
 def main():
     """ Main function called to start the conversion."""
-    #p = optparse.OptionParser(version="%prog 1.0")
     parser = argparse.ArgumentParser()
 
-    # set possible CLI options
-    # p.add_option('--save-junks-to-blog', '-b', action="store_true", help="save the individual files as blog posts (only relevant if -s set)", default=False, dest="blog")
-    # p.add_option('--save-individual', '-s', action="store_true", help="save individual files for every headline", default=False, dest="individual")
-    # p.add_option('--input-file', '-f', metavar="INPUT_FILE", help="Read from INPUT_FILE.", dest="filename")
-    # p.add_option('--input-dir', '-d', metavar="INPUT_FILE", help="Read from INPUT_FILE.", dest="filename")
-    # p.add_option('--output-dir', '-o', metavar="OUTPUT_DIRECTORY", help="Save the converted files to the OUTPUT_DIRECTORY.", dest="output_dir")
     parser.add_argument('source', help="File or directory containing source files from Wikidot site")
     parser.add_argument('dest', help="Directory to output files converted to MediaWiki format")
     parser.add_argument(
@@ -194,15 +222,6 @@ def main():
         help="Include any XML files in the files associated with source files"
     )
     arguments = parser.parse_args()
-
-    # parse our CLI options
-    # options, arguments = p.parse_args()
-    # if options.filename == None:
-    #     p.error("No filename for the input file set. Have a look at the parameters using the option -h.")
-    #     sys.exit(1)
-    # if options.output_dir == None:
-    #     options.output_dir = raw_input('Please enter an output directory for the converted documents [%s]: ' % DEFAULT_OUTPUT_DIR)
-    #     if options.output_dir == "": options.output_dir = DEFAULT_OUTPUT_DIR
 
     converter = ConversionController(arguments)
     converter.convert(arguments.source, arguments.dest)

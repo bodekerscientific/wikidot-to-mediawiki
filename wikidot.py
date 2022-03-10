@@ -23,10 +23,13 @@ class WikidotToMediaWiki():
                                     r'([^:])\[!--([\s\S ]*?)--\]': r"\1<!--\2-->", # comments
                                     r'([^:])__([\s\S ]*?)__': r"\1'''\2'''", # underlining → bold
                                     #r'([^:]){{([\s\S ]*?)}}': r'\1`\2`', # inline monospaced text
+                                    r'\^\^([\S\s]*?)\^\^': r'<sup>\1</sup>', # superscript
+                                    r'\[\[size\s*\S*?\]\]': r'', # ignore text sizing
+                                    r'\[\[/size\s*?\]\]' : r'',  # ignore text sizing
                                   }
         self.regex_split_condition = r"^\+ ([^\n]*)$"
 
-    def convert(self, text, file_prefix=""):
+    def convert(self, text, file_prefix="", fullname_to_title={}):
         text = '\n'+text+'\n'# add embed in newlines (makes regex replaces work better)
         # first we search for [[code]] statements as we don't want any replacement to happen inside those code blocks!
         code_blocks = dict()
@@ -52,12 +55,29 @@ class WikidotToMediaWiki():
         for hashes in re.finditer(r"^([ \t]+)\*", text, re.MULTILINE):
             text = text[:hashes.start(1)] + ("#" * len(hashes.group(1))) + text[hashes.end(1):]
 
-        # Internal links -- replace [[[internal link]]] with [[internal link]]
-        def convert_internal_link(link):
+        # Internal links -- replace [[[internal link]]] with [[internal link]], informed 
+        # by mapping from fullname to title
+        lower_title_to_case_sensitive_title = {
+            title.lower(): title
+            for title in fullname_to_title.values()
+        }
+
+        def convert_internal_link(link: str):
+            # Trim whitespace at either end
+            link = link.strip()
             # Convert underscores and at-signs to hypens (because that's what Wikidot did)
-            link = re.sub(r"[_@]", r"-", link)
-            # Convert link to lower case
-            link = link.lower()
+            fullname = re.sub(r"[_@]", r"-", link)
+            # Convert link to lower case (because that's what Wikidot did)
+            fullname = fullname.lower()
+            if fullname in fullname_to_title:
+                return fullname_to_title[fullname]
+            else:
+                # Check if link references page title rather than its fullname
+                #title = re.sub(" ", "_", link)
+                lower_title = link.lower() # Wikidot seems to be case-insensitive
+                if lower_title in lower_title_to_case_sensitive_title:
+                    return lower_title_to_case_sensitive_title[lower_title]
+            print(f"  Failed to find page given the link '{link}'")
             return link
 
         internal_links = []
@@ -80,10 +100,51 @@ class WikidotToMediaWiki():
 
         # Image
         linked_files = []
-        for image in re.finditer(r"\[\[image ([\S]*)([\S\s ]*?)\]\]", text):
-            original_filename = image.group(1)
+        for image in re.finditer(r"\[\[(f?[=<>]?)image\s*([\S\s]*?)\s*\]\]", text):
+            image_format = image.group(1)
+            image_contents = image.group(2)
+
+            # Process the horizontal alignment of the image
+            options = []
+            if image_format == "<" or image_format == "f<":
+                options.append("left")
+            if image_format == ">" or image_format == "f>":
+                options.append("right")
+            if image_format == "=":
+                options.append("center")
+            
+            # Process any attributes
+            filename = image_contents
+            for attribute in re.finditer(r"(\S*?)=\"([\S\s]*?)\"", image_contents, re.MULTILINE):
+                key = attribute.group(1)
+                value = attribute.group(2)
+                if key == "width":
+                    options.append(value)
+                if key == "height":
+                    options.append("x"+value)
+                if key == "size":
+                    if value == "square":
+                        options.append("75x75px")
+                    if value == "thumbnail":
+                        options.append("100px")
+                    if value == "small":
+                        options.append("240px")
+                    if value == "medium":
+                        options.append("500px")
+                    if value == "medium640":
+                        options.append("640px")
+                    if value == "large":
+                        options.append("1024px")
+                if key == "link":
+                    options.append(f"link={value.lstrip()}")
+                if key == "alt":
+                    options.append(f"alt={value.lstrip()}")
+                filename = re.sub(attribute.group(0), "", filename)
+
+            original_filename = filename.strip()
             filename = file_prefix + original_filename
-            text = text.replace(image.group(0), "[[File:" + filename + "]]")
+            file_contents = "|".join([filename] + options)
+            text = text.replace(image.group(0), "[[File:" + file_contents + "]]")
             linked_files.append(original_filename)
 
         # Gallery
