@@ -80,10 +80,54 @@ class WikidotToMediaWiki():
 
         # Image
         linked_files = []
-        for image in re.finditer(r"\[\[image ([\S]*)([\S\s ]*?)\]\]", text):
-            original_filename = image.group(1)
+        for image in re.finditer(r"\[\[(f?[=<>]?)image\s*([\S\s]*?)\s*\]\]", text):
+            image_format = image.group(1)
+            image_contents = image.group(2)
+
+            # Process the horizontal alignment of the image
+            print("image_format:", image_format)
+            options = []
+            if image_format == "<" or image_format == "f<":
+                options.append("left")
+            if image_format == ">" or image_format == "f>":
+                options.append("right")
+            if image_format == "=":
+                options.append("center")
+            
+            # Process any attributes
+            print("image_contents:", image_contents)
+            filename = image_contents
+            for attribute in re.finditer(r"(\S*?)=\"([\S\s]*?)\"", image_contents, re.MULTILINE):
+                key = attribute.group(1)
+                value = attribute.group(2)
+                print("Atribute found:", attribute.group(1), attribute.group(2))
+                if key == "width":
+                    options.append(value)
+                if key == "height":
+                    options.append("x"+value)
+                if key == "size":
+                    if value == "square":
+                        options.append("75x75px")
+                    if value == "thumbnail":
+                        options.append("100px")
+                    if value == "small":
+                        options.append("240px")
+                    if value == "medium":
+                        options.append("500px")
+                    if value == "medium640":
+                        options.append("640px")
+                    if value == "large":
+                        options.append("1024px")
+                if key == "link":
+                    options.append(f"link={value.lstrip()}")
+                if key == "alt":
+                    options.append(f"alt={value.lstrip()}")
+                filename = re.sub(attribute.group(0), "", filename)
+
+            original_filename = filename.strip()
             filename = file_prefix + original_filename
-            text = text.replace(image.group(0), "[[File:" + filename + "]]")
+            file_contents = "|".join([filename] + options)
+            text = text.replace(image.group(0), "[[File:" + file_contents + "]]")
             linked_files.append(original_filename)
 
         # Gallery
