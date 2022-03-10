@@ -13,10 +13,19 @@ class PageXML:
 
     @property
     def fullname(self):
-        print("Getting fullname")
         data_elements = self._dom.getElementsByTagName("data")
         assert len(data_elements) == 1
         fullnames = data_elements[0].getElementsByTagName("fullname")
         assert len(fullnames) == 1
         fullname_node = fullnames[0]
         return get_text(fullname_node.childNodes)
+
+    @property
+    def title(self):
+        data_elements = self._dom.getElementsByTagName("data")
+        assert len(data_elements) == 1
+        fullnames = data_elements[0].getElementsByTagName("title")
+        assert len(fullnames) == 1
+        fullname_node = fullnames[0]
+        return get_text(fullname_node.childNodes)
+
