@@ -198,8 +198,6 @@ class ConversionController():
         output_file = dest_dir / "Wikidot_to_MediaWiki_report.mktxt"
         self.write_unicode_file(output_file, processed_pages)
 
-        print(internal_links_map)
-
 
     def write_unicode_file(self, path_to_file, content):
         try:
@@ -207,6 +205,7 @@ class ConversionController():
             out_file.write(content)
         except:
             print("Error on writing to file %s." % path_to_file)
+
 
 def main():
     """ Main function called to start the conversion."""
