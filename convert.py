@@ -80,12 +80,19 @@ class ConversionController():
         print(f"Processing metadata from XML files:")
         fullname_to_title = {}
         for xml_file in xml_files:
+            print(f"  Processing {xml_file}")
             page_xml_parser = PageXMLParser(xml_file.read_text())
             title = page_xml_parser.title
             #title = regex.sub(" ", "_", title)
             fullname = page_xml_parser.fullname
             print(f"  {fullname}: '{title}'")
             fullname_to_title[fullname] = title
+            # It's possible the filename could be used as the fullname too,
+            # just make sure it doesn't just exist in the map
+            filename = xml_file.stem
+            if fullname != filename:
+                assert filename not in fullname_to_title
+                fullname_to_title[filename] = title
 
         # Go through the txt files
         for input_file in input_files:
