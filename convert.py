@@ -80,12 +80,19 @@ class ConversionController():
         print(f"Processing metadata from XML files:")
         fullname_to_title = {}
         for xml_file in xml_files:
+            print(f"  Processing {xml_file}")
             page_xml_parser = PageXMLParser(xml_file.read_text())
             title = page_xml_parser.title
             #title = regex.sub(" ", "_", title)
             fullname = page_xml_parser.fullname
             print(f"  {fullname}: '{title}'")
             fullname_to_title[fullname] = title
+            # It's possible the filename could be used as the fullname too,
+            # just make sure it doesn't just exist in the map
+            filename = xml_file.stem
+            if fullname != filename:
+                assert filename not in fullname_to_title
+                fullname_to_title[filename] = title
 
         # Go through the txt files
         for input_file in input_files:
@@ -198,8 +205,6 @@ class ConversionController():
         output_file = dest_dir / "Wikidot_to_MediaWiki_report.mktxt"
         self.write_unicode_file(output_file, processed_pages)
 
-        print(internal_links_map)
-
 
     def write_unicode_file(self, path_to_file, content):
         try:
@@ -207,6 +212,7 @@ class ConversionController():
             out_file.write(content)
         except:
             print("Error on writing to file %s." % path_to_file)
+
 
 def main():
     """ Main function called to start the conversion."""

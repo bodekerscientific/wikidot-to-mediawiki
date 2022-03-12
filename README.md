@@ -6,6 +6,16 @@ The conversion program (`convert.py`) takes a backup of a Wikidot site (produced
 
 The upload program (`upload.py`) takes the output of the converter and uploads the data to a MediaWiki site.
 
+## Installation
+
+A conda environment file is included with this repository.  To install it, you'll need to have conda installed, then run:
+
+    conda env create --file environment.yml
+
+Once the new environment has been created, you'll need to activate it:
+
+    conda activate wikidot-to-mediawiki
+
 ## How to Use
 
 There are three key steps in moving a Wikidot-based wiki to a MediaWiki-based wiki:
